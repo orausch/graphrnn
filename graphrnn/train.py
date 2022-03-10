@@ -1,10 +1,12 @@
 """
 def __init__(self, input_size, embedding_size, hidden_size, num_layers, has_input=True, has_output=False, output_size=None):
 """
+
 import time
 
 from tqdm import tqdm
 import numpy as np
+import wandb
 
 import torch
 import torch.nn.functional as F
@@ -77,6 +79,7 @@ def train_epoch(
         scheduler_rnn.step()
 
         loss_sum += loss.item()
+        wandb.log(dict(loss=loss.item(), batch=batch_idx, epoch=epoch))
 
     return loss_sum / (batch_idx + 1)
 

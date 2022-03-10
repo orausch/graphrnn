@@ -4,6 +4,7 @@ Prepare dataset
 
 import networkx as nx
 import numpy as np
+import wandb
 
 import torch
 import torch.utils.data
@@ -17,6 +18,7 @@ def create_graphs(args):
             for j in range(10, 20):
                 graphs.append(nx.grid_2d_graph(i, j))
         args.max_prev_node = 40
+        wandb.config["max_prev_node"] = 40
 
     return graphs
 

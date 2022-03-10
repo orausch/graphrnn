@@ -2,10 +2,16 @@
 Experiments entrypoint
 """
 import argparse
+
+import wandb
+
 from graphrnn import data, model, train
 
 
 if __name__ == "__main__":
+    wandb.init(project="graphrnn-reproduction", entity="graphnn-reproduction")
+
+
     parser = argparse.ArgumentParser()
     parser.add_argument("device", choices=["cpu"])
     parser.add_argument("graph_type", choices=["grid"])
@@ -34,8 +40,10 @@ if __name__ == "__main__":
     # parser.add_argument("--milestones", type=float, default=0.003)
 
     args = parser.parse_args()
+
     # FIXME force set this for now
     args.milestones = [400, 1000]
+    wandb.config["milestones"] = [400, 1000]
 
     dataloaders = data.create_dataloaders(args)
 

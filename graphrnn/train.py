@@ -51,6 +51,8 @@ def train_epoch(
         y_len = y_len.numpy().tolist()
         x = torch.index_select(x_unsorted, 0, sort_index)
         y = torch.index_select(y_unsorted, 0, sort_index)
+        x.to(args.device)
+        y.to(args.device)
 
         h = rnn(x, pack=True, input_len=y_len)
         y_pred = output(h)

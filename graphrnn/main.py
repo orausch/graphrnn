@@ -2,11 +2,12 @@
 Experiments entrypoint
 """
 import argparse
-from graphrnn import data
+from graphrnn import data, model
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("device", choices=["cpu"])
     parser.add_argument("graph_type", choices=["grid"])
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--test_batch_size", type=int, default=32)
@@ -18,8 +19,27 @@ if __name__ == "__main__":
     )
     parser.add_argument("--max_prev_node", type=int)
     parser.add_argument("--max_num_node", type=int)
+
+    # parameters for the model sizes
+    parser.add_argument("--embedding_size_rnn", type=int, default=64)
+    parser.add_argument("--embedding_size_rnn_output", type=int, default=8)
+    parser.add_argument("--embedding_size_output", type=int, default=64)
+    parser.add_argument("--hidden_size_rnn", type=int, default=128)
+    parser.add_argument("--hidden_size_rnn_output", type=int, default=16)
+    parser.add_argument("--num_layers", type=int, default=4)
+
     args = parser.parse_args()
 
     dataloaders = data.create_dataloaders(args)
-    for batch in dataloaders["train"]:
-        print(batch)
+
+    rnn = model.GRUPlain(
+        input_size=args.max_prev_node,
+        embedding_size=args.embedding_size_rnn,
+        hidden_size=args.hidden_size_rnn,
+        num_layers=args.num_layers,
+        has_input=True,
+        has_output=False,
+    ).to(args.device)
+    output = model.MLPPlain(
+        h_size=args.hidden_size_rnn, embedding_size=args.embedding_size_output, y_size=args.max_prev_node
+    ).to(args.device)

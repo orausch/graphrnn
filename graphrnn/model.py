@@ -6,13 +6,13 @@ import torch
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
-class GRU_plain(nn.Module):
+class GRUPlain(nn.Module):
     """RNN model which can be used for the graph-level RNN and the edge-level RNN"""
 
     def __init__(
-        self, input_size, embedding_size, hidden_size, num_layers, has_input=True, has_output=False, output_size=None
+        self, *, input_size, embedding_size, hidden_size, num_layers, has_input=True, has_output=False, output_size=None
     ):
-        super(GRU_plain, self).__init__()
+        super(GRUPlain, self).__init__()
         self.num_layers = num_layers
         self.hidden_size = hidden_size
         self.has_input = has_input
@@ -36,12 +36,12 @@ class GRU_plain(nn.Module):
 
         for name, param in self.rnn.named_parameters():
             if "bias" in name:
-                nn.init.constant(param, 0.25)
+                nn.init.constant_(param, 0.25)
             elif "weight" in name:
-                nn.init.xavier_uniform(param, gain=nn.init.calculate_gain("sigmoid"))
+                nn.init.xavier_uniform_(param, gain=nn.init.calculate_gain("sigmoid"))
         for m in self.modules():
             if isinstance(m, nn.Linear):
-                m.weight.data = nn.init.xavier_uniform(m.weight.data, gain=nn.init.calculate_gain("relu"))
+                m.weight.data = nn.init.xavier_uniform_(m.weight.data, gain=nn.init.calculate_gain("relu"))
 
     def init_hidden(self, batch_size):
         return torch.zeros(self.num_layers, batch_size, self.hidden_size, requires_grad=True)
@@ -63,18 +63,18 @@ class GRU_plain(nn.Module):
         return output_raw
 
 
-class MLP_plain(nn.Module):
+class MLPPlain(nn.Module):
     """MLP used to model the adjacency vector S_i when edges are assumed independent."""
 
-    def __init__(self, h_size, embedding_size, y_size):
-        super(MLP_plain, self).__init__()
+    def __init__(self, *, h_size, embedding_size, y_size):
+        super(MLPPlain, self).__init__()
         self.deterministic_output = nn.Sequential(
             nn.Linear(h_size, embedding_size), nn.ReLU(), nn.Linear(embedding_size, y_size)
         )
 
         for m in self.modules():
             if isinstance(m, nn.Linear):
-                m.weight.data = nn.init.xavier_uniform(m.weight.data, gain=nn.init.calculate_gain("relu"))
+                m.weight.data = nn.init.xavier_uniform_(m.weight.data, gain=nn.init.calculate_gain("relu"))
 
     def forward(self, h):
         y = self.deterministic_output(h)

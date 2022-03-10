@@ -63,8 +63,9 @@ class GRU_plain(nn.Module):
         return output_raw
 
 
-# a deterministic linear output
 class MLP_plain(nn.Module):
+    """MLP used to model the adjacency vector S_i when edges are assumed independent."""
+
     def __init__(self, h_size, embedding_size, y_size):
         super(MLP_plain, self).__init__()
         self.deterministic_output = nn.Sequential(

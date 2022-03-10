@@ -2,7 +2,7 @@
 Experiments entrypoint
 """
 import argparse
-from graphrnn import data, model
+from graphrnn import data, model, train
 
 
 if __name__ == "__main__":
@@ -28,7 +28,14 @@ if __name__ == "__main__":
     parser.add_argument("--hidden_size_rnn_output", type=int, default=16)
     parser.add_argument("--num_layers", type=int, default=4)
 
+    # Learning rate stuff
+    parser.add_argument("--lr_rate", type=float, default=0.3)
+    parser.add_argument("--lr", type=float, default=0.003)
+    # parser.add_argument("--milestones", type=float, default=0.003)
+
     args = parser.parse_args()
+    # FIXME force set this for now
+    args.milestones = [400, 1000]
 
     dataloaders = data.create_dataloaders(args)
 
@@ -43,3 +50,5 @@ if __name__ == "__main__":
     output = model.MLPPlain(
         h_size=args.hidden_size_rnn, embedding_size=args.embedding_size_output, y_size=args.max_prev_node
     ).to(args.device)
+
+    train.train(args=args, dataloader=dataloaders["train"], rnn=rnn, output=output)

@@ -1,8 +1,14 @@
 """
 def __init__(self, input_size, embedding_size, hidden_size, num_layers, has_input=True, has_output=False, output_size=None):
 """
+import time
+
+from tqdm import tqdm
+import numpy as np
+
 import torch
 import torch.nn.functional as F
+from torch import optim
 
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
@@ -27,14 +33,15 @@ def binary_cross_entropy_weight(y_pred, y, has_weight=False, weight_length=1, we
 
 
 def train_epoch(
-    epoch, args, rnn, output, data_loader, optimizer_rnn, optimizer_output, scheduler_rnn, scheduler_output
+    *, epoch, args, rnn, output, dataloader, optimizer_rnn, optimizer_output, scheduler_rnn, scheduler_output
 ):
 
     rnn.train()
     output.train()
     loss_sum = 0
 
-    for batch_idx, data in enumerate(data_loader):
+    for batch_idx, data in enumerate(bar := tqdm(dataloader, unit="batch")):
+        bar.set_description(f"Epoch: {epoch}")
         rnn.zero_grad()
         output.zero_grad()
         x_unsorted = data["x"].float()
@@ -56,7 +63,7 @@ def train_epoch(
 
         h = rnn(x, pack=True, input_len=y_len)
         y_pred = output(h)
-        y_pred = F.sigmoid(y_pred)
+        y_pred = torch.sigmoid(y_pred)
         # clean
         y_pred = pack_padded_sequence(y_pred, y_len, batch_first=True)
         y_pred = pad_packed_sequence(y_pred, batch_first=True)[0]
@@ -69,16 +76,27 @@ def train_epoch(
         scheduler_output.step()
         scheduler_rnn.step()
 
-        if epoch % args.epochs_log == 0 and batch_idx == 0:  # only output first batch's statistics
-            print(
-                "Epoch: {}/{}, train loss: {:.6f}, graph type: {}, num_layer: {}, hidden: {}".format(
-                    epoch, args.epochs, loss.data[0], args.graph_type, args.num_layers, args.hidden_size_rnn
-                )
-            )
-
-        # logging
-        # log_value("loss_" + args.fname, loss.data[0], epoch * args.batch_ratio + batch_idx)
-
-        loss_sum += loss.data[0]
+        loss_sum += loss.item()
 
     return loss_sum / (batch_idx + 1)
+
+
+def train(*, args, dataloader, rnn, output):
+    # check if load existing model
+    # initialize optimizer
+    optimizer_rnn = optim.Adam(list(rnn.parameters()), lr=args.lr)
+    optimizer_output = optim.Adam(list(output.parameters()), lr=args.lr)
+
+    scheduler_rnn = optim.lr_scheduler.MultiStepLR(optimizer_rnn, milestones=args.milestones, gamma=args.lr_rate)
+    scheduler_output = optim.lr_scheduler.MultiStepLR(optimizer_output, milestones=args.milestones, gamma=args.lr_rate)
+    train_epoch(
+        epoch=0,
+        args=args,
+        rnn=rnn,
+        output=output,
+        dataloader=dataloader,
+        optimizer_rnn=optimizer_rnn,
+        optimizer_output=optimizer_output,
+        scheduler_rnn=scheduler_rnn,
+        scheduler_output=scheduler_output,
+    )

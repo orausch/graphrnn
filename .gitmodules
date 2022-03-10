@@ -1,0 +1,3 @@
+[submodule "graph-generation"]
+	path = graph-generation
+	url = https://github.com/JiaxuanYou/graph-generation

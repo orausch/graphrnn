@@ -1,5 +1,5 @@
 black==22.1.0
-networkx==2.7.1
+networkx==2.6
 numpy==1.22.3
 tqdm==4.63.0
 wandb==0.12.11

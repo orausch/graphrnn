@@ -124,8 +124,8 @@ def train_epoch(
                 loss=loss.item(),
                 batch=batch_idx,
                 epoch=epoch,
-                output_lr=scheduler_output.get_lr()[0],
-                rnn_lr=scheduler_rnn.get_lr()[0],
+                output_lr=scheduler_output.get_last_lr()[0],
+                rnn_lr=scheduler_rnn.get_last_lr()[0],
             )
         )
 

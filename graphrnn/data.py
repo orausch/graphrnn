@@ -237,7 +237,9 @@ def create_dataloaders(args):
             num_samples=args.batch_size * args.batch_ratio,
             replacement=True,
         )
-        dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, sampler=sample_strategy)
+        dataloader = torch.utils.data.DataLoader(
+            dataset, batch_size=args.batch_size, sampler=sample_strategy, num_workers=args.num_workers
+        )
         dataloaders[data] = dataloader
 
     return dataloaders

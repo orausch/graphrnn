@@ -24,6 +24,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--max_prev_node", type=int)
     parser.add_argument("--max_num_node", type=int)
+    parser.add_argument("--num_workers", type=int, default=4)
 
     # parameters for the model sizes
     parser.add_argument("--embedding_size_rnn", type=int, default=64)

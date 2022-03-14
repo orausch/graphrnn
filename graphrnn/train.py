@@ -119,7 +119,15 @@ def train_epoch(
         scheduler_rnn.step()
 
         loss_sum += loss.item()
-        wandb.log(dict(loss=loss.item(), batch=batch_idx, epoch=epoch))
+        wandb.log(
+            dict(
+                loss=loss.item(),
+                batch=batch_idx,
+                epoch=epoch,
+                output_lr=scheduler_output.get_lr()[0],
+                rnn_lr=scheduler_rnn.get_lr()[0],
+            )
+        )
 
 
 def train(*, args, dataloader, rnn, output):

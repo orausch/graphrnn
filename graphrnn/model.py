@@ -12,6 +12,15 @@ class GRUPlain(nn.Module):
     def __init__(
         self, *, input_size, embedding_size, hidden_size, num_layers, has_input=True, has_output=False, output_size=None
     ):
+        """
+        @param input_size: size of the adjacency vector. The constant M in the paper.
+        @param embedding_size:
+        @param hidden_size:
+        @param num_layers:
+        @param has_input:
+        @param has_output:
+        @param output_size:
+        """
         super(GRUPlain, self).__init__()
         self.num_layers = num_layers
         self.hidden_size = hidden_size
@@ -67,6 +76,11 @@ class MLPPlain(nn.Module):
     """MLP used to model the adjacency vector S_i when edges are assumed independent."""
 
     def __init__(self, *, h_size, embedding_size, y_size):
+        """
+        @param h_size: size of hidden layer in the graph-level RNN. Used as input.
+        @param embedding_size: Size of the MLP linear layer.
+        @param y_size: size of the adjacency vector. The constant M in the paper.
+        """
         super(MLPPlain, self).__init__()
         self.deterministic_output = nn.Sequential(
             nn.Linear(h_size, embedding_size), nn.ReLU(), nn.Linear(embedding_size, y_size)

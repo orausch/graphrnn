@@ -83,7 +83,8 @@ def train_epoch(
     output.train()
     loss_sum = 0
 
-    for batch_idx, data in enumerate(bar := tqdm(dataloader, unit="batch")):
+    bar = tqdm(dataloader, unit="batch")
+    for batch_idx, data in enumerate(bar):
         bar.set_description(f"Epoch: {epoch}")
         rnn.zero_grad()
         output.zero_grad()
@@ -149,7 +150,8 @@ def train(*, args, dataloader, rnn, output):
             names = []
             for sample_time in tqdm(range(1, 4)):
                 G_pred = []
-                for _ in (bar := tqdm(range(0, args.test_total_size, 16), unit="batch")):
+                bar = tqdm(range(0, args.test_total_size, 16), unit="batch")
+                for _ in bar:
                     bar.set_description(f"Evaluation {sample_time}/3")
                     G_pred.extend(
                         test_mlp_epoch(

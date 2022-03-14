@@ -146,6 +146,7 @@ def train(*, args, dataloader, rnn, output):
         )
 
         if epoch % args.epochs_test == 0 and epoch >= args.epochs_test_start:
+            names = []
             for sample_time in tqdm(range(1, 4)):
                 G_pred = []
                 for _ in (bar := tqdm(range(0, args.test_total_size, 16), unit="batch")):
@@ -165,4 +166,6 @@ def train(*, args, dataloader, rnn, output):
                 os.makedirs(os.path.dirname(fname), exist_ok=True)
                 print(f"Saving {len(G_pred)} graphs to {fname}")
                 data.save_graph_list(G_pred, fname)
-    wandb.save(f"{save_path}/*.dat")
+                names.append(fname)
+            for name in names:
+                wandb.save(name, policy="now")

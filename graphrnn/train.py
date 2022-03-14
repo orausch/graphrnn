@@ -131,7 +131,7 @@ def train(*, args, dataloader, rnn, output):
 
     scheduler_rnn = optim.lr_scheduler.MultiStepLR(optimizer_rnn, milestones=args.milestones, gamma=args.lr_rate)
     scheduler_output = optim.lr_scheduler.MultiStepLR(optimizer_output, milestones=args.milestones, gamma=args.lr_rate)
-
+    save_path = f"{args.graph_save_path}/{args.graph_type}"
     for epoch in range(1, args.epochs + 1):
         train_epoch(
             epoch=epoch,
@@ -161,7 +161,8 @@ def train(*, args, dataloader, rnn, output):
                         )
                     )
                 # save graphs
-                fname = f"{args.graph_save_path}/{args.graph_type}/{epoch}_{sample_time}.dat"
+                fname = os.path.join(save_path, f"{epoch}_{sample_time}.dat")
                 os.makedirs(os.path.dirname(fname), exist_ok=True)
                 print(f"Saving {len(G_pred)} graphs to {fname}")
                 data.save_graph_list(G_pred, fname)
+    wandb.save(f"{save_path}/*.dat")

@@ -1,8 +1,10 @@
 """
 Models.
 """
-from torch import nn
 import torch
+from torch import nn
+from torch.nn import functional as F
+
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
@@ -30,13 +32,23 @@ class GRUPlain(nn.Module):
         if has_input:
             self.input = nn.Linear(input_size, embedding_size)
             self.rnn = nn.GRU(
-                input_size=embedding_size, hidden_size=hidden_size, num_layers=num_layers, batch_first=True
+                input_size=embedding_size,
+                hidden_size=hidden_size,
+                num_layers=num_layers,
+                batch_first=True,
             )
         else:
-            self.rnn = nn.GRU(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers, batch_first=True)
+            self.rnn = nn.GRU(
+                input_size=input_size,
+                hidden_size=hidden_size,
+                num_layers=num_layers,
+                batch_first=True,
+            )
         if has_output:
             self.output = nn.Sequential(
-                nn.Linear(hidden_size, embedding_size), nn.ReLU(), nn.Linear(embedding_size, output_size)
+                nn.Linear(hidden_size, embedding_size),
+                nn.ReLU(),
+                nn.Linear(embedding_size, output_size),
             )
 
         self.relu = nn.ReLU()
@@ -83,7 +95,9 @@ class MLPPlain(nn.Module):
         """
         super(MLPPlain, self).__init__()
         self.deterministic_output = nn.Sequential(
-            nn.Linear(h_size, embedding_size), nn.ReLU(), nn.Linear(embedding_size, y_size)
+            nn.Linear(h_size, embedding_size),
+            nn.ReLU(),
+            nn.Linear(embedding_size, y_size),
         )
 
         for m in self.modules():
@@ -93,3 +107,39 @@ class MLPPlain(nn.Module):
     def forward(self, h):
         y = self.deterministic_output(h)
         return y
+
+
+def sample_sigmoid(*, args, y, sample, thresh=0.5, sample_time=2):
+    """
+    Do sampling over unnormalized score
+    :param y: input
+    :param sample: Bool
+    :param thresh: if not sample, the threshold
+    :param sampe_time: how many times do we sample, if =1, do single sample
+    :return: sampled result
+    """
+
+    # do sigmoid first
+    y = F.sigmoid(y)
+    # do sampling
+    if sample:
+        if sample_time > 1:
+            y_result = torch.rand(y.size(0), y.size(1), y.size(2)).to(args.device)
+            # loop over all batches
+            for i in range(y_result.size(0)):
+                # do 'multi_sample' times sampling
+                for j in range(sample_time):
+                    y_thresh = torch.rand(y.size(1), y.size(2)).to(args.device)
+                    y_result[i] = torch.gt(y[i], y_thresh).float()
+                    if (torch.sum(y_result[i]).data > 0).any():
+                        break
+                    # else:
+                    #     print('all zero',j)
+        else:
+            y_thresh = torch.rand(y.size(0), y.size(1), y.size(2)).to(args.device)
+            y_result = torch.gt(y, y_thresh).float()
+    # do max likelihood based on some threshold
+    else:
+        y_thresh = (torch.ones(y.size(0), y.size(1), y.size(2)) * thresh).to(args.device)
+        y_result = torch.gt(y, y_thresh).float()
+    return y_result

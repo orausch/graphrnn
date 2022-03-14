@@ -11,7 +11,6 @@ from graphrnn import data, model, train
 if __name__ == "__main__":
     wandb.init(project="graphrnn-reproduction", entity="graphnn-reproduction")
 
-
     parser = argparse.ArgumentParser()
     parser.add_argument("device", choices=["cpu"])
     parser.add_argument("graph_type", choices=["grid"])
@@ -34,10 +33,21 @@ if __name__ == "__main__":
     parser.add_argument("--hidden_size_rnn_output", type=int, default=16)
     parser.add_argument("--num_layers", type=int, default=4)
 
-    # Learning rate stuff
+    # Training parameters
+    parser.add_argument("--epochs", type=int, default=3000)
     parser.add_argument("--lr_rate", type=float, default=0.3)
     parser.add_argument("--lr", type=float, default=0.003)
-    # parser.add_argument("--milestones", type=float, default=0.003)
+
+    # train time graph generation
+    parser.add_argument(
+        "--test_total_size",
+        type=int,
+        default=1000,
+        help="Total number of test graphs to generate",
+    )
+    parser.add_argument("--epochs_test", type=int, default=100)
+    parser.add_argument("--epochs_test_start", type=int, default=100)
+    parser.add_argument("graph_save_path", type=str, help="Path to save generated graphs")
 
     args = parser.parse_args()
 
@@ -56,7 +66,9 @@ if __name__ == "__main__":
         has_output=False,
     ).to(args.device)
     output = model.MLPPlain(
-        h_size=args.hidden_size_rnn, embedding_size=args.embedding_size_output, y_size=args.max_prev_node
+        h_size=args.hidden_size_rnn,
+        embedding_size=args.embedding_size_output,
+        y_size=args.max_prev_node,
     ).to(args.device)
 
     train.train(args=args, dataloader=dataloaders["train"], rnn=rnn, output=output)

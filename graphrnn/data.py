@@ -1,6 +1,7 @@
 """
 Prepare dataset
 """
+import pickle
 
 import networkx as nx
 import numpy as np
@@ -113,17 +114,45 @@ def encode_adj(adj, max_prev_node=10, is_full=False):
     return adj_output
 
 
+def decode_adj(adj_output):
+    """
+    recover to adj from adj_output
+    note: here adj_output have shape (n-1)*m
+    """
+    max_prev_node = adj_output.shape[1]
+    adj = np.zeros((adj_output.shape[0], adj_output.shape[0]))
+    for i in range(adj_output.shape[0]):
+        input_start = max(0, i - max_prev_node + 1)
+        input_end = i + 1
+        output_start = max_prev_node + max(0, i - max_prev_node + 1) - (i + 1)
+        output_end = max_prev_node
+        adj[i, input_start:input_end] = adj_output[i, ::-1][output_start:output_end]  # reverse order
+    adj_full = np.zeros((adj_output.shape[0] + 1, adj_output.shape[0] + 1))
+    n = adj_full.shape[0]
+    adj_full[1:n, 0 : n - 1] = np.tril(adj, 0)
+    adj_full = adj_full + adj_full.T
+
+    return adj_full
+
+
 class GraphSequenceSampler(torch.utils.data.Dataset):
     def __init__(self, G_list, max_num_node=None, max_prev_node=None, iteration=20000):
+        # for the ith graph in G...
+        # adj_all[i] is the adj matrix of the ith graph
         self.adj_all = []
+        # len_all[i] is the number of nodes of the ith graph
         self.len_all = []
         for G in G_list:
             self.adj_all.append(np.asarray(nx.to_numpy_matrix(G)))
             self.len_all.append(G.number_of_nodes())
+
+        # self.n is the maximum number of nodes
         if max_num_node is None:
             self.n = max(self.len_all)
         else:
             self.n = max_num_node
+
+        # max_prev_node is called M in the paper
         if max_prev_node is None:
             print("calculating max previous node, total iteration: {}".format(iteration))
             self.max_prev_node = max(self.calc_max_prev_node(iter=iteration))
@@ -137,19 +166,31 @@ class GraphSequenceSampler(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         adj_copy = self.adj_all[idx].copy()
         x_batch = np.zeros((self.n, self.max_prev_node))  # here zeros are padded for small graph
-        x_batch[0, :] = 1  # the first input token is all ones
+        x_batch[0, :] = 1  # the first input token is all ones (SOS)
         y_batch = np.zeros((self.n, self.max_prev_node))  # here zeros are padded for small graph
         # generate input x, y pairs
         len_batch = adj_copy.shape[0]
         x_idx = np.random.permutation(adj_copy.shape[0])
+
+        # shuffle the adjacency matrix along the node dimension
         adj_copy = adj_copy[np.ix_(x_idx, x_idx)]
         adj_copy_matrix = np.asmatrix(adj_copy)
         G = nx.from_numpy_matrix(adj_copy_matrix)
+
         # then do bfs in the permuted G
         start_idx = np.random.randint(adj_copy.shape[0])
+
+        # array of node ids
         x_idx = np.array(bfs_seq(G, start_idx))
+
+        # order according to BFS iteration order
         adj_copy = adj_copy[np.ix_(x_idx, x_idx)]
+
+        # TODO: for each row i, once adj_copy[i, j] is zero, all indices
+        # following j should also be zero
+
         adj_encoded = encode_adj(adj_copy.copy(), max_prev_node=self.max_prev_node)
+
         # get x and y and adj
         # for small graph the rest are zero padded
         y_batch[0 : adj_encoded.shape[0], :] = adj_encoded
@@ -182,6 +223,8 @@ class GraphSequenceSampler(torch.utils.data.Dataset):
 
 def create_dataloaders(args):
     graphs = create_graphs(args)
+    args.max_num_node = max([graphs[i].number_of_nodes() for i in range(len(graphs))])
+    wandb.config["max_num_node"] = args.max_num_node
     splits = train_test_split(graphs)
 
     dataloaders = {}
@@ -198,3 +241,23 @@ def create_dataloaders(args):
         dataloaders[data] = dataloader
 
     return dataloaders
+
+
+# save a list of graphs
+def save_graph_list(G_list, fname):
+    with open(fname, "wb") as f:
+        pickle.dump(G_list, f)
+
+
+def get_graph(adj):
+    """
+    get a graph from zero-padded adj
+    :param adj:
+    :return:
+    """
+    # remove all zeros rows and columns
+    adj = adj[~np.all(adj == 0, axis=1)]
+    adj = adj[:, ~np.all(adj == 0, axis=0)]
+    adj = np.asmatrix(adj)
+    G = nx.from_numpy_matrix(adj)
+    return G

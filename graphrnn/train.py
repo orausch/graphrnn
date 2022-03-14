@@ -16,7 +16,7 @@ from graphrnn import model, data
 
 
 def test_mlp_epoch(*, epoch, args, rnn, output, sample_time, test_batch_size=16):
-    rnn.hidden = rnn.init_hidden(test_batch_size)
+    rnn.hidden = rnn.init_hidden(test_batch_size, args.device)
     rnn.eval()
     output.eval()
 
@@ -83,9 +83,7 @@ def train_epoch(
     output.train()
     loss_sum = 0
 
-    bar = tqdm(dataloader, unit="batch")
-    for batch_idx, data in enumerate(bar):
-        bar.set_description(f"Epoch: {epoch}")
+    for batch_idx, data in enumerate(dataloader):
         rnn.zero_grad()
         output.zero_grad()
         x_unsorted = data["x"].float()
@@ -95,15 +93,15 @@ def train_epoch(
         x_unsorted = x_unsorted[:, 0:y_len_max, :]
         y_unsorted = y_unsorted[:, 0:y_len_max, :]
         # initialize lstm hidden state according to batch size
-        rnn.hidden = rnn.init_hidden(batch_size=x_unsorted.size(0))
+        rnn.hidden = rnn.init_hidden(batch_size=x_unsorted.size(0), device=args.device)
 
         # sort input
         y_len, sort_index = torch.sort(y_len_unsorted, 0, descending=True)
         y_len = y_len.numpy().tolist()
         x = torch.index_select(x_unsorted, 0, sort_index)
         y = torch.index_select(y_unsorted, 0, sort_index)
-        x.to(args.device)
-        y.to(args.device)
+        x = x.to(args.device)
+        y = y.to(args.device)
 
         h = rnn(x, pack=True, input_len=y_len)
         y_pred = output(h)
@@ -133,7 +131,7 @@ def train(*, args, dataloader, rnn, output):
     scheduler_rnn = optim.lr_scheduler.MultiStepLR(optimizer_rnn, milestones=args.milestones, gamma=args.lr_rate)
     scheduler_output = optim.lr_scheduler.MultiStepLR(optimizer_output, milestones=args.milestones, gamma=args.lr_rate)
     save_path = f"{args.graph_save_path}/{args.graph_type}"
-    for epoch in range(1, args.epochs + 1):
+    for epoch in tqdm(range(1, args.epochs + 1), unit="epoch"):
         train_epoch(
             epoch=epoch,
             args=args,
@@ -150,7 +148,7 @@ def train(*, args, dataloader, rnn, output):
             names = []
             for sample_time in tqdm(range(1, 4)):
                 G_pred = []
-                bar = tqdm(range(0, args.test_total_size, 16), unit="batch")
+                bar = tqdm(range(0, args.test_total_size, 16), unit="batch", leave=False)
                 for _ in bar:
                     bar.set_description(f"Evaluation {sample_time}/3")
                     G_pred.extend(

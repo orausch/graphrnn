@@ -64,8 +64,8 @@ class GRUPlain(nn.Module):
             if isinstance(m, nn.Linear):
                 m.weight.data = nn.init.xavier_uniform_(m.weight.data, gain=nn.init.calculate_gain("relu"))
 
-    def init_hidden(self, batch_size):
-        return torch.zeros(self.num_layers, batch_size, self.hidden_size, requires_grad=True)
+    def init_hidden(self, batch_size, device):
+        return torch.zeros(self.num_layers, batch_size, self.hidden_size, requires_grad=True, device=device)
 
     def forward(self, input_raw, pack=False, input_len=None):
         if self.has_input:

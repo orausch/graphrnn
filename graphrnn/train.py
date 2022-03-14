@@ -154,11 +154,10 @@ def train(*, args, dataloader, rnn, output):
 
         if epoch % args.epochs_test == 0 and epoch >= args.epochs_test_start:
             names = []
+            print("Evaluating...", end="")
             for sample_time in tqdm(range(1, 4)):
                 G_pred = []
-                bar = tqdm(range(0, args.test_total_size, 16), unit="batch", leave=False)
-                for _ in bar:
-                    bar.set_description(f"Evaluation {sample_time}/3")
+                for _ in range(0, args.test_total_size, 16):
                     G_pred.extend(
                         test_mlp_epoch(
                             epoch=epoch,
@@ -175,5 +174,7 @@ def train(*, args, dataloader, rnn, output):
                 print(f"Saving {len(G_pred)} graphs to {fname}")
                 data.save_graph_list(G_pred, fname)
                 names.append(fname)
+            print("Uploading...", end="")
             for name in names:
                 wandb.save(name, policy="now")
+            print("Done.")

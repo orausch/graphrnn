@@ -38,6 +38,13 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", type=int, default=3000)
     parser.add_argument("--lr_rate", type=float, default=0.3)
     parser.add_argument("--lr", type=float, default=0.003)
+    parser.add_argument(
+        "--step_scheduler_outside_loop",
+        action="store_true",
+        help="In the paper codebase, the scheduler is stepped inside the train"
+        "loop, which results in a much faster scheduler than they mentioned in"
+        "the paper.",
+    )
 
     # train time graph generation
     parser.add_argument(

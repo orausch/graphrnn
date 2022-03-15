@@ -115,8 +115,9 @@ def train_epoch(
         # update deterministic and lstm
         optimizer_output.step()
         optimizer_rnn.step()
-        scheduler_output.step()
-        scheduler_rnn.step()
+        if not args.step_scheduler_outside_loop:
+            scheduler_output.step()
+            scheduler_rnn.step()
 
         loss_sum += loss.item()
         wandb.log(
@@ -128,6 +129,9 @@ def train_epoch(
                 rnn_lr=scheduler_rnn.get_last_lr()[0],
             )
         )
+    if args.step_scheduler_outside_loop:
+        scheduler_output.step()
+        scheduler_rnn.step()
 
 
 def train(*, args, dataloader, rnn, output):

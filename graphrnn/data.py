@@ -15,6 +15,7 @@ from matplotlib import pyplot as plt
 def create_graphs(args):
     graphs = []
     if args.graph_type == "grid":
+        # Is drawn as a grid with nx.draw_spectral(g).
         graphs = []
         for i in range(10, 20):
             for j in range(10, 20):

@@ -29,7 +29,7 @@ def create_graphs(args):
         # c_sizes = [15] * num_communities    # Easy version.
         for k in range(3000):
             graphs.append(n_community(c_sizes, p_intra=0.7, p_inter=0.05))
-        args.max_prev_node = 30
+        args.max_prev_node = 17*num_communities
         wandb.config["max_prev_node"] = 17*num_communities
 
     return graphs

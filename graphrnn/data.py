@@ -9,6 +9,7 @@ import wandb
 
 import torch
 import torch.utils.data
+from matplotlib import pyplot as plt
 
 
 def create_graphs(args):
@@ -21,20 +22,19 @@ def create_graphs(args):
         args.max_prev_node = 40
         wandb.config["max_prev_node"] = 40
 
-    elif args.graph_type == "community":
-        num_communities = 2
+    elif args.graph_type.startswith("community"):
+        num_communities = int(args.graph_type[-1])
         print('Creating dataset with ', num_communities, ' communities')
-        # c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], num_communities)
-        c_sizes = [15] * num_communities    # Easy version.
+        c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], num_communities)
+        # c_sizes = [15] * num_communities    # Easy version.
         for k in range(3000):
-            graphs.append(n_community(c_sizes, p_inter=0.01))
+            graphs.append(n_community(c_sizes, p_intra=0.7, p_inter=0.05))
         args.max_prev_node = 30
         wandb.config["max_prev_node"] = 30
 
     return graphs
 
-def n_community(c_sizes, p_inter=0.01):
-    p_intra = 0.7
+def n_community(c_sizes, p_intra=0.3, p_inter=0.05):
     graphs = [nx.gnp_random_graph(c_sizes[i], p_intra, seed=i) for i in range(len(c_sizes))]
     G = nx.disjoint_union_all(graphs)
     communities = list(nx.connected_components(G))

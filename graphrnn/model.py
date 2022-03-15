@@ -15,13 +15,23 @@ class GRUPlain(nn.Module):
         self, *, input_size, embedding_size, hidden_size, num_layers, has_input=True, has_output=False, output_size=None
     ):
         """
-        @param input_size: size of the adjacency vector. The constant M in the paper.
+        @param input_size:
+            For node-level rnn: size of the adjacency vector. The constant M in the paper.
+            For edge-level rnn: 1-dimensional binary. 1 if previous edge was added, else 0.
         @param embedding_size:
-        @param hidden_size:
-        @param num_layers:
-        @param has_input:
+            1. input size to RNN if "has input" is true
+            2. Used in the hidden layer for output tranformation if "has_output"
+        @param hidden_size: size of the hidden states.
+        @param num_layers: number of stacked rnn layers.
+        @param has_input: (Always set to True in the codebase ...)
+            For node-level rnn:
+            For edge-level rnn:
         @param has_output:
+            For node-level rnn: When giving output to the edge-level rnn. Not used with edge MLP.
+            For edge-level rnn: Always.
         @param output_size:
+            For node-level rnn: Size of hidden state of the edge-level rnn (to initialize its hidden state).
+            For edge-level rnn: p(edge) in [0,1].
         """
         super(GRUPlain, self).__init__()
         self.num_layers = num_layers
@@ -66,6 +76,7 @@ class GRUPlain(nn.Module):
 
     def init_hidden(self, batch_size, device):
         return torch.zeros(self.num_layers, batch_size, self.hidden_size, requires_grad=True, device=device)
+        # Pretty sure the hidden state doesn't require grad lol :')
 
     def forward(self, input_raw, pack=False, input_len=None):
         if self.has_input:

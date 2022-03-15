@@ -37,13 +37,11 @@ def n_community(c_sizes, p_inter=0.01):
     p_intra = 0.7
     graphs = [nx.gnp_random_graph(c_sizes[i], p_intra, seed=i) for i in range(len(c_sizes))]
     G = nx.disjoint_union_all(graphs)
-    communities = list(nx.connected_component_subgraphs(G))
+    communities = list(nx.connected_components(G))
     for i in range(len(communities)):
-        subG1 = communities[i]
-        nodes1 = list(subG1.nodes())
+        nodes1 = communities[i]
         for j in range(i+1, len(communities)):
-            subG2 = communities[j]
-            nodes2 = list(subG2.nodes())
+            nodes2 = communities[j]
             has_inter_edge = False
             for n1 in nodes1:
                 for n2 in nodes2:
@@ -51,7 +49,7 @@ def n_community(c_sizes, p_inter=0.01):
                         G.add_edge(n1, n2)
                         has_inter_edge = True
             if not has_inter_edge:  # They require connected networks?
-                G.add_edge(nodes1[0], nodes2[0])
+                G.add_edge(list(nodes1)[0], list(nodes2)[0])
     return G
 
 

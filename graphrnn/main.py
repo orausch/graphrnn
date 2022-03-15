@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("device", choices=["cpu", "cuda"])
-    parser.add_argument("graph_type", choices=["grid"])
+    parser.add_argument("graph_type", choices=["grid", "community"])
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--test_batch_size", type=int, default=32)
     parser.add_argument(
@@ -60,6 +60,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # FIXME force set this for now
+    # Should be multiplied by the batch_ratio = 32 i.e. the number of batches per epoch.
     args.milestones = [400, 1000]
     wandb.config["milestones"] = [400, 1000]
 

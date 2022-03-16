@@ -75,6 +75,7 @@ def bfs_seq(G, start_id):
     :param start_id:
     :return:
     """
+    # FIXME: can simply do sum(dict(nx.bfs_successors(G, start_id)).items(), [start_id]).
     dictionary = dict(nx.bfs_successors(G, start_id))
     start = [start_id]
     output = [start_id]
@@ -82,11 +83,11 @@ def bfs_seq(G, start_id):
         next = []
         while len(start) > 0:
             current = start.pop(0)
-            neighbor = dictionary.get(current)
-            if neighbor is not None:
+            neighbors = dictionary.get(current)
+            if neighbors is not None:
                 #### a wrong example, should not permute here!
                 # shuffle(neighbor)
-                next = next + neighbor
+                next = next + neighbors
         output = output + next
         start = next
     return output
@@ -110,7 +111,7 @@ def encode_adj_flexible(adj):
         input_end = i + 1
         adj_slice = adj[i, input_start:input_end]
         adj_output.append(adj_slice)
-        non_zero = np.nonzero(adj_slice)[0]
+        non_zero = np.nonzero(adj_slice)[0]         # !The important line here!
         input_start = input_end - len(adj_slice) + np.amin(non_zero)
 
     return adj_output
@@ -128,14 +129,14 @@ def encode_adj(adj, max_prev_node=10, is_full=False):
     # pick up lower tri
     adj = np.tril(adj, k=-1)
     n = adj.shape[0]
-    adj = adj[1:n, 0 : n - 1]
+    adj = adj[1:n, 0 : n - 1]       # can infer connections to last node from prev connections.
 
     # use max_prev_node to truncate
     # note: now adj is a (n-1)*(n-1) matrix
     adj_output = np.zeros((adj.shape[0], max_prev_node))
     for i in range(adj.shape[0]):
         input_start = max(0, i - max_prev_node + 1)
-        input_end = i + 1
+        input_end = i + 1       # If we take a fixed size (start+max_prev_node) it would be the same anyway.
         output_start = max_prev_node + input_start - input_end
         output_end = max_prev_node
         adj_output[i, output_start:output_end] = adj[i, input_start:input_end]
@@ -173,7 +174,7 @@ class GraphSequenceSampler(torch.utils.data.Dataset):
         # len_all[i] is the number of nodes of the ith graph
         self.len_all = []
         for G in G_list:
-            self.adj_all.append(np.asarray(nx.to_numpy_matrix(G)))
+            self.adj_all.append(np.asarray(nx.to_numpy_matrix(G)))      # why matrix vs array?
             self.len_all.append(G.number_of_nodes())
 
         # self.n is the maximum number of nodes
@@ -199,9 +200,10 @@ class GraphSequenceSampler(torch.utils.data.Dataset):
         x_batch[0, :] = 1  # the first input token is all ones (SOS)
         y_batch = np.zeros((self.n, self.max_prev_node))  # here zeros are padded for small graph
         # generate input x, y pairs
-        len_batch = adj_copy.shape[0]
+        len_batch = adj_copy.shape[0]   # Here a batch refers to a batch of adjecency vectors of the same graph.
         x_idx = np.random.permutation(adj_copy.shape[0])
-
+        # FIXME: Is permuting the graph then doing a dfs with a random start equivalent to just doing a dfs with a random start?
+        # FIXME: The only thing that seems to change is node ordering during the BFS.
         # shuffle the adjacency matrix along the node dimension
         adj_copy = adj_copy[np.ix_(x_idx, x_idx)]
         adj_copy_matrix = np.asmatrix(adj_copy)
@@ -223,6 +225,7 @@ class GraphSequenceSampler(torch.utils.data.Dataset):
 
         # get x and y and adj
         # for small graph the rest are zero padded
+        # adj_encoded.shape[0] is num_nodes-1 (as the first row has been removed, and is replaced by SOS)
         y_batch[0 : adj_encoded.shape[0], :] = adj_encoded
         x_batch[1 : adj_encoded.shape[0] + 1, :] = adj_encoded
         return {"x": x_batch, "y": y_batch, "len": len_batch}
@@ -238,7 +241,7 @@ class GraphSequenceSampler(torch.utils.data.Dataset):
             x_idx = np.random.permutation(adj_copy.shape[0])
             adj_copy = adj_copy[np.ix_(x_idx, x_idx)]
             adj_copy_matrix = np.asmatrix(adj_copy)
-            G = nx.from_numpy_matrix(adj_copy_matrix)
+            G = nx.from_numpy_matrix(adj_copy_matrix)   # FIXME: Useless matrix vs array casts.
             # then do bfs in the permuted G
             start_idx = np.random.randint(adj_copy.shape[0])
             x_idx = np.array(bfs_seq(G, start_idx))
@@ -253,6 +256,7 @@ class GraphSequenceSampler(torch.utils.data.Dataset):
 
 def create_dataloaders(args):
     graphs = create_graphs(args)
+    # FIXME: graphs is never shuffled! For grids, this results in the larger ones being exclusively in the tests.
     args.max_num_node = max([graphs[i].number_of_nodes() for i in range(len(graphs))])
     wandb.config["max_num_node"] = args.max_num_node
     splits = train_test_split(graphs)
@@ -261,7 +265,7 @@ def create_dataloaders(args):
 
     for data, graphs in splits.items():
         dataset = GraphSequenceSampler(graphs, max_prev_node=args.max_prev_node, max_num_node=args.max_num_node)
-        # FIXME: can this just be a RandomSampler?
+        # FIXME: can this just be a RandomSampler? Seems true to me.
         sample_strategy = torch.utils.data.WeightedRandomSampler(
             [1.0 / len(dataset) for _ in range(len(dataset))],
             num_samples=args.batch_size * args.batch_ratio,

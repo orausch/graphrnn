@@ -39,6 +39,7 @@ if __name__ == "__main__":
     parser.add_argument("--hidden_size_rnn", type=int, default=128)
     parser.add_argument("--hidden_size_rnn_output", type=int, default=16)
     parser.add_argument("--num_layers", type=int, default=4)
+    parser.add_argument("--has_input", default=True, type=bool)
 
     # Training parameters
     parser.add_argument("--epochs", type=int, default=3000)
@@ -78,7 +79,7 @@ if __name__ == "__main__":
         embedding_size=args.embedding_size_rnn,
         hidden_size=args.hidden_size_rnn,
         num_layers=args.num_layers,
-        has_input=True,
+        has_input=args.has_input,
         has_output=False,
     ).to(args.device)
     output = model.MLPPlain(

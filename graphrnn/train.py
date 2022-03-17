@@ -88,8 +88,10 @@ def train_epoch(
         output.zero_grad()
         x_unsorted = data["x"].float()
         y_unsorted = data["y"].float()
-        y_len_unsorted = data["len"]
+        y_len_unsorted = data["len"]    # Batch of graphs of different sizes.
         y_len_max = max(y_len_unsorted)
+        # X is padded to max_n_node in the whole dataset,
+        # but can  be padded according to minibatch here.
         x_unsorted = x_unsorted[:, 0:y_len_max, :]
         y_unsorted = y_unsorted[:, 0:y_len_max, :]
         # initialize lstm hidden state according to batch size
@@ -106,7 +108,7 @@ def train_epoch(
         h = rnn(x, pack=True, input_len=y_len)
         y_pred = output(h)
         y_pred = torch.sigmoid(y_pred)
-        # clean
+        # Clean the padding that has been transformed by reapplying the padding.
         y_pred = pack_padded_sequence(y_pred, y_len, batch_first=True)
         y_pred = pad_packed_sequence(y_pred, batch_first=True)[0]
         # use cross entropy loss

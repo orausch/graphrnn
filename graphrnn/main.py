@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("device", choices=["cpu", "cuda"])
-    parser.add_argument("graph_type", choices=["grid", "community2", "community4"])
+    parser.add_argument("graph_type", choices=["grid", "community2", "community4", "debug"])
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--test_batch_size", type=int, default=32)
     parser.add_argument(

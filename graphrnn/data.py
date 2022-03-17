@@ -3,6 +3,7 @@ Prepare dataset
 """
 import pickle
 
+import networkx
 import networkx as nx
 import numpy as np
 import wandb
@@ -32,6 +33,25 @@ def create_graphs(args):
             graphs.append(n_community(c_sizes, p_intra=0.7, p_inter=0.05))
         args.max_prev_node = 17*num_communities
         wandb.config["max_prev_node"] = 17*num_communities
+
+    elif args.graph_type == "debug":
+        # The graph in figure 1 of the paper and a subset of it to show padding.
+        args.max_prev_node = 3
+        wandb.config["max_prev_node"] = 3
+        g1 = networkx.from_numpy_array(np.array(
+            [[0, 1, 1, 0, 0],
+             [1, 0, 0, 1, 0],
+             [1, 0, 0, 1, 1],
+             [0, 1, 1, 0, 1],
+             [0, 0, 1, 1, 0]]))
+        g2 = networkx.from_numpy_array(np.array(
+            [[0, 1, 1, 0],
+             [1, 0, 0, 1],
+             [1, 0, 0, 0],
+             [0, 1, 0, 0],]))
+        for _ in range(args.batch_size*args.batch_ratio):
+            graphs.append(g1.copy())
+            graphs.append(g2.copy())
 
     return graphs
 

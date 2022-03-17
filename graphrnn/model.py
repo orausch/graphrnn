@@ -131,7 +131,7 @@ def sample_sigmoid(*, args, y, sample, thresh=0.5, sample_time=2):
     """
 
     # do sigmoid first
-    y = F.sigmoid(y)
+    y = F.sigmoid(y)    # FIXME: Deprecated. Use torch.sigmoid instead.
     # do sampling
     if sample:
         if sample_time > 1:

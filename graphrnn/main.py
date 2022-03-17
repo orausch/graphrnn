@@ -6,14 +6,18 @@ import argparse
 import wandb
 
 from graphrnn import data, model, train
-
+from model import process_model_args
+from train import train_nll
 
 if __name__ == "__main__":
     wandb.init(project="graphrnn-reproduction", entity="graphnn-reproduction")
 
     parser = argparse.ArgumentParser()
     parser.add_argument("device", choices=["cpu", "cuda"])
-    parser.add_argument("graph_type", choices=["grid", "community2", "community4", "debug"])
+    parser.add_argument("graph_type", choices=["grid",
+                                               "community-2", "community-4", "community-small",
+                                               "ego-small",
+                                               "debug"])
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--test_batch_size", type=int, default=32)
     parser.add_argument(
@@ -27,6 +31,8 @@ if __name__ == "__main__":
     parser.add_argument("--num_workers", type=int, default=4)
 
     # parameters for the model sizes
+    parser.add_argument("--model_type", choices=["normal", "small"], default="normal")
+    parser.add_argument("--model_param_choices", choices=["default", "custom"], default="default")
     parser.add_argument("--embedding_size_rnn", type=int, default=64)
     parser.add_argument("--embedding_size_rnn_output", type=int, default=8)
     parser.add_argument("--embedding_size_output", type=int, default=64)
@@ -58,6 +64,7 @@ if __name__ == "__main__":
     parser.add_argument("graph_save_path", type=str, help="Path to save generated graphs")
 
     args = parser.parse_args()
+    process_model_args(args)
 
     # FIXME force set this for now
     # Should be multiplied by the batch_ratio = 32 i.e. the number of batches per epoch.
@@ -81,3 +88,5 @@ if __name__ == "__main__":
     ).to(args.device)
 
     train.train(args=args, dataloader=dataloaders["train"], rnn=rnn, output=output)
+
+    # train_nll(args, dataloaders['train'], dataloaders['test'], rnn, output,  dataloaders['train_len'], dataloaders['test_len'], max_iter=10)

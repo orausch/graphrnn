@@ -2,15 +2,55 @@
 Prepare dataset
 """
 import pickle
+import random
 
 import networkx
 import networkx as nx
 import numpy as np
 import wandb
 
+import scipy.sparse as sp
 import torch
 import torch.utils.data
 from matplotlib import pyplot as plt
+
+
+def Graph_load(dataset):
+    '''
+    Load a single graph dataset
+    :param dataset: dataset name
+    :return:
+    '''
+    def parse_index_file(filename):
+        index = []
+        for line in open(filename):
+            index.append(int(line.strip()))
+        return index
+
+    names = ['x', 'tx', 'allx', 'graph']
+    objects = []
+    for i in range(len(names)):
+        load = pickle.load(open("datasets/ind.{}.{}".format(dataset, names[i]), 'rb'), encoding='latin1')
+        # print('loaded')
+        objects.append(load)
+        # print(load)
+    x, tx, allx, graph = tuple(objects)
+    test_idx_reorder = parse_index_file("datasets/ind.{}.test.index".format(dataset))
+    test_idx_range = np.sort(test_idx_reorder)
+
+    if dataset == 'citeseer':
+        # Fix citeseer dataset (there are some isolated nodes in the graph)
+        # Find isolated nodes, add them as zero-vecs into the right position
+        test_idx_range_full = range(min(test_idx_reorder), max(test_idx_reorder) + 1)
+        tx_extended = sp.lil_matrix((len(test_idx_range_full), x.shape[1]))
+        tx_extended[test_idx_range - min(test_idx_range), :] = tx
+        tx = tx_extended
+
+    features = sp.vstack((allx, tx)).tolil()
+    features[test_idx_reorder, :] = features[test_idx_range, :]
+    G = nx.from_dict_of_lists(graph)
+    adj = nx.adjacency_matrix(G)
+    return adj, features, G
 
 
 def create_graphs(args):
@@ -24,15 +64,53 @@ def create_graphs(args):
         args.max_prev_node = 40
         wandb.config["max_prev_node"] = 40
 
+    if args.graph_type == "ego-small":
+        """200 ego graphs with 4 ≤ |V| ≤ 18 (Ego-small)."""
+        _, _, G = Graph_load(dataset='citeseer')
+        G = nx.subgraph(G, max(nx.connected_components(G), key=len))
+        G = nx.convert_node_labels_to_integers(G)
+        graphs = []
+        for i in range(G.number_of_nodes()):
+            G_ego = nx.ego_graph(G, i, radius=1)
+            if (G_ego.number_of_nodes() >= 4) and (G_ego.number_of_nodes() <= 20):
+                graphs.append(G_ego)
+        # FIXME: The authors shuffle the dataset before taking a subset this inherently makes reproducibility hard.
+        random.shuffle(graphs)
+
+        graphs = graphs[0:200]
+        args.max_prev_node = 15
+        wandb.config["max_prev_node"] = 15
+
     elif args.graph_type.startswith("community"):
-        num_communities = int(args.graph_type[-1])
-        print('Creating dataset with ', num_communities, ' communities')
-        c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], num_communities)
-        # c_sizes = [15] * num_communities    # Easy version.
-        for k in range(3000):
-            graphs.append(n_community(c_sizes, p_intra=0.7, p_inter=0.05))
-        args.max_prev_node = 17*num_communities
-        wandb.config["max_prev_node"] = 17*num_communities
+        if args.graph_type == "community-small":
+            num_communities = 2
+            p_intra = 0.3
+            p_inter = 0.05
+            for num_nodes_per_community in [6, 7, 8, 9, 10]:
+                for _ in range(100):
+                    graphs.append(n_community([num_nodes_per_community]*num_communities, p_intra=p_intra, p_inter=p_inter))
+            args.max_prev_node = 20
+            wandb.config["max_prev_node"] = 20
+            # FIXME: temporary fix. Shuffling should not be dome here.
+            random.shuffle(graphs)
+        else:
+            if args.graph_type == "community-2":
+                num_cummunities = 2
+                p_intra = 0.3
+                p_inter = 0.05
+                for num_nodes_per_community in [30,40, 50, 60, 80]:
+                    for _ in range(100):
+                        graphs.append(n_community([num_nodes_per_community]*num_cummunities,
+                                                  p_intra=p_intra, p_inter=p_inter))
+            elif args.graph_type == "community-4":
+                num_communities = 4
+                p_intra = 0.7
+                p_inter = 0.01
+                c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], num_communities)
+                for k in range(3000):
+                    graphs.append(n_community(c_sizes, p_intra=p_intra, p_inter=p_inter))
+            args.max_prev_node = 100
+            wandb.config["max_prev_node"] = 100
 
     elif args.graph_type == "debug":
         # The graph in figure 1 of the paper and a subset of it to show padding.
@@ -55,7 +133,7 @@ def create_graphs(args):
 
     return graphs
 
-def n_community(c_sizes, p_intra=0.3, p_inter=0.05):
+def n_community(c_sizes, p_intra, p_inter):
     graphs = [nx.gnp_random_graph(c_sizes[i], p_intra, seed=i) for i in range(len(c_sizes))]
     G = nx.disjoint_union_all(graphs)
     communities = list(nx.connected_components(G))
@@ -295,6 +373,7 @@ def create_dataloaders(args):
             dataset, batch_size=args.batch_size, sampler=sample_strategy, num_workers=args.num_workers
         )
         dataloaders[data] = dataloader
+        dataloaders[data + '_len'] = len(dataset)
 
     return dataloaders
 

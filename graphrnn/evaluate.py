@@ -1,3 +1,4 @@
+import logging
 import pickle
 import argparse
 from typing import Iterator
@@ -6,6 +7,10 @@ import eval.stats
 
 from tqdm import tqdm
 from dataclasses import dataclass
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def pick_connected_component_new(G):
@@ -93,8 +98,8 @@ def get_evaluator(config: EvaluationConfig) -> Iterator[GraphStats]:
 def generate_pred_list(*, graph_type: str = 'grid') -> GraphList:
 
     epoch_step = 100
-    epoch_start = 2600
-    epoch_end = 2600
+    epoch_start = 3000
+    epoch_end = 3001
 
     for epoch in range(epoch_start, epoch_end+1, epoch_step):
         for _time in range(1,4):
@@ -106,28 +111,50 @@ def generate_pred_list(*, graph_type: str = 'grid') -> GraphList:
             yield GraphList(pred_graph_list, _time, epoch)
 
 
+class GraphTypeException(Exception):
+    pass
+
+def generate_truth_list(*, graph_type: str = 'grid') -> GraphList:
+
+    if graph_type == 'grid':
+        return GraphList(load_graph_list(f'graphs/GraphRNN_RNN_grid_4_128_test_0.dat'), 0, 0)
+    elif graph_type.startswith('community'):
+        return GraphList(load_graph_list(f'graphs/GraphRNN_RNN_community_4_128_test_0.dat'), 0, 0)
+    else:
+        raise GraphTypeException('graph_type must be either "grid" or "community"')
+
+
 def evaluate(*, graph_type: str = 'grid', run_id: str = '0') -> None:
 
     pred_generator = generate_pred_list(graph_type=graph_type)
-    truth_graphs = GraphList(load_graph_list(f'graphs/GraphRNN_RNN_grid_4_128_test_0.dat'), 0, 0)
+    truth_graphs = generate_truth_list(graph_type=graph_type)
     config: EvaluationConfig = EvaluationConfig(truth_graphs, pred_generator)
 
     evaluation_generator = get_evaluator(config)
 
-    with open(f'eval_grid_{run_id}.csv', 'w+') as outfile:
+    logger.info(f'Evaluating {graph_type}')
+
+    with open(f'eval_{graph_type}_{run_id}.csv', 'w+') as outfile:
         outfile.write('epoch,time,mmd_degree,mmd_clustering,mmd_4orbits\n')
+        outfile.flush()
 
         for pred_graphs, evaluation in evaluation_generator:
+
+            logger.info(f'{pred_graphs.epoch = }\t{pred_graphs.time = }')
+
             outfile.write(f'{pred_graphs.epoch},{pred_graphs.time},{evaluation.mmd_degree},{evaluation.mmd_clustering},{evaluation.mmd_4orbits}\n')
             outfile.flush()
     
 
 
+
+
+
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("device", choices=["cpu"])
-    parser.add_argument("graph_type", choices=["grid"])
+    parser.add_argument("graph_type", choices=["grid", "community"])
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--test_batch_size", type=int, default=32)
     parser.add_argument(
@@ -152,6 +179,11 @@ if __name__ == '__main__':
     parser.add_argument("--lr", type=float, default=0.003)
     # parser.add_argument("--milestones", type=float, default=0.003)
 
+    parser.add_argument('--run_id', type=str, default='0')
+
     args = parser.parse_args()
 
-    evaluate()
+    evaluate(
+        graph_type=args.graph_type,
+        run_id=args.run_id,
+    )

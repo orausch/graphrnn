@@ -88,8 +88,10 @@ def train_epoch(
         output.zero_grad()
         x_unsorted = data["x"].float()
         y_unsorted = data["y"].float()
-        y_len_unsorted = data["len"]
+        y_len_unsorted = data["len"]    # Batch of graphs of different sizes.
         y_len_max = max(y_len_unsorted)
+        # X is padded to max_n_node in the whole dataset,
+        # but can  be padded according to minibatch here.
         x_unsorted = x_unsorted[:, 0:y_len_max, :]
         y_unsorted = y_unsorted[:, 0:y_len_max, :]
         # initialize lstm hidden state according to batch size
@@ -106,7 +108,7 @@ def train_epoch(
         h = rnn(x, pack=True, input_len=y_len)
         y_pred = output(h)
         y_pred = torch.sigmoid(y_pred)
-        # clean
+        # Clean the padding that has been transformed by reapplying the padding.
         y_pred = pack_padded_sequence(y_pred, y_len, batch_first=True)
         y_pred = pad_packed_sequence(y_pred, batch_first=True)[0]
         # use cross entropy loss
@@ -182,3 +184,62 @@ def train(*, args, dataloader, rnn, output):
             for name in names:
                 wandb.save(name, policy="now")
             print("Done.")
+
+
+def train_nll(args, dataset_train, dataset_test, rnn, output, graph_validate_len, graph_test_len, max_iter=1000):
+    save_path = f"{args.graph_save_path}/{args.graph_type}"
+    fname_output = os.path.join(save_path, f"nll.csv")
+
+    with open(fname_output, 'w+') as f:
+        f.write(str(graph_validate_len) + ',' + str(graph_test_len) + '\n')
+        f.write('train,test\n')
+        for iter in range(max_iter):
+            nll_train = train_mlp_forward_epoch(args, rnn, output, dataset_train)
+            nll_test = train_mlp_forward_epoch(args, rnn, output, dataset_test)
+            print('train', nll_train, 'test', nll_test)
+            f.write(str(nll_train) + ',' + str(nll_test) + '\n')
+
+    print('NLL evaluation done')
+
+
+def train_mlp_forward_epoch(args, rnn, output, data_loader):
+    rnn.train()
+    output.train()
+    loss_sum = 0
+    for batch_idx, data in enumerate(data_loader):
+        rnn.zero_grad()
+        output.zero_grad()
+        x_unsorted = data['x'].float()
+        y_unsorted = data['y'].float()
+        y_len_unsorted = data['len']
+        y_len_max = max(y_len_unsorted)
+        x_unsorted = x_unsorted[:, 0:y_len_max, :]
+        y_unsorted = y_unsorted[:, 0:y_len_max, :]
+        # initialize lstm hidden state according to batch size
+        rnn.hidden = rnn.init_hidden(batch_size=x_unsorted.size(0), device=args.device)
+
+        # sort input
+        y_len, sort_index = torch.sort(y_len_unsorted, 0, descending=True)
+        y_len = y_len.numpy().tolist()
+        x = torch.index_select(x_unsorted, 0, sort_index)
+        y = torch.index_select(y_unsorted, 0, sort_index)
+        x = x.to(args.device)
+        y = y.to(args.device)
+
+        h = rnn(x, pack=True, input_len=y_len)
+        y_pred = output(h)
+        y_pred = F.sigmoid(y_pred)
+        # clean
+        y_pred = pack_padded_sequence(y_pred, y_len, batch_first=True)
+        y_pred = pad_packed_sequence(y_pred, batch_first=True)[0]
+        # use cross entropy loss
+
+        loss = 0
+        for j in range(y.size(1)):
+            # print('y_pred',y_pred[0,j,:],'y',y[0,j,:])
+            end_idx = min(j + 1, y.size(2))
+            loss += binary_cross_entropy_weight(y_pred[:, j, 0:end_idx], y[:, j, 0:end_idx]) * end_idx
+
+        loss_sum += loss.item()
+
+    return loss_sum / (batch_idx + 1)

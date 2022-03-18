@@ -8,11 +8,23 @@ from torch.nn import functional as F
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
+def process_model_args(args):
+    if args.model_type == "small" and args.model_param_choices == "default":
+        args.hidden_size_rnn //= 2
+        args.hidden_size_rnn_output //= 2
+
+        args.embedding_size_rnn //= 2
+        args.hidden_size_rnn_output //= 2
+
+        args.embedding_size_output //= 2
+
+
 class GRUPlain(nn.Module):
     """RNN model which can be used for the graph-level RNN and the edge-level RNN"""
 
     def __init__(
-        self, *, input_size, embedding_size, hidden_size, num_layers, has_input=True, has_output=False, output_size=None
+            self, *, input_size, embedding_size, hidden_size, num_layers, has_input=True, has_output=False,
+            output_size=None
     ):
         """
         @param input_size:
@@ -131,7 +143,7 @@ def sample_sigmoid(*, args, y, sample, thresh=0.5, sample_time=2):
     """
 
     # do sigmoid first
-    y = F.sigmoid(y)
+    y = F.sigmoid(y)  # FIXME: Deprecated. Use torch.sigmoid instead.
     # do sampling
     if sample:
         if sample_time > 1:

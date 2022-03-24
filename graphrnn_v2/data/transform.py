@@ -4,7 +4,6 @@ import networkx as nx
 
 from torch_geometric import transforms as T
 
-## Dataloader and transformations
 class EncodeGraphRNNFeature(T.BaseTransform):
     def __init__(self, M):
         self.M = M
@@ -13,7 +12,7 @@ class EncodeGraphRNNFeature(T.BaseTransform):
     def view_lower_bands(adj, M):
         """
         Uses stride tricks to create a view of adj containing the
-        M bands below the diagonal of the given square matrix.
+        M bands above the diagonal of the given square matrix.
         :param adj: dimension N x N
         :param M: number of bands above the diagonal to return
         :result: dimension N x M; the M bands above the diagonal

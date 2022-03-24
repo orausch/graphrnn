@@ -1,2 +1,2 @@
-from .data import RNNTransform
+from .transform import RNNTransform
 from .datasets import GridDataset, DebugDataset

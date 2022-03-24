@@ -3,12 +3,15 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
 
 class GraphRNN_S(nn.Module):
-    def __init__(self, adjacency_size: int,
-                 embed_first: bool,
-                 adjacency_embedding_size: int,
-                 hidden_size: int,
-                 num_layers: int,
-                 output_embedding_size: int):
+    def __init__(
+        self,
+        adjacency_size: int,
+        embed_first: bool,
+        adjacency_embedding_size: int,
+        hidden_size: int,
+        num_layers: int,
+        output_embedding_size: int,
+    ):
         """
         @param adjacency_size: Size of an adjacency vector. M in the paper.
         @param embed_first: Whether to transform the adjacency vectors before feeding them to the RNN cell.
@@ -23,23 +26,19 @@ class GraphRNN_S(nn.Module):
                 nn.Linear(adjacency_size, adjacency_embedding_size),
                 nn.ReLU(),
             )
-            self.rnn = nn.RNN(input_size=adjacency_embedding_size,
-                              hidden_size=hidden_size,
-                              num_layers=num_layers,
-                              batch_first=True)
+            self.rnn = nn.RNN(
+                input_size=adjacency_embedding_size, hidden_size=hidden_size, num_layers=num_layers, batch_first=True
+            )
 
         else:
             self.embedding = nn.Identity()
-            self.rnn = nn.RNN(input_size=adjacency_size,
-                              hidden_size=hidden_size,
-                              num_layers=num_layers,
-                              batch_first=True)
+            self.rnn = nn.RNN(
+                input_size=adjacency_size, hidden_size=hidden_size, num_layers=num_layers, batch_first=True
+            )
         self.hidden = None
 
         self.adjacency_mlp = nn.Sequential(
-            nn.Linear(hidden_size, output_embedding_size),
-            nn.ReLU(),
-            nn.Linear(output_embedding_size, adjacency_size)
+            nn.Linear(hidden_size, output_embedding_size), nn.ReLU(), nn.Linear(output_embedding_size, adjacency_size)
         )
 
     def forward(self, input_sequences, input_length):

@@ -5,7 +5,8 @@ Run the graphrnn_v2 model on community graphs.
 from tqdm import tqdm
 
 import torch
-from torch_geometric.data import DataLoader
+import torch.nn.functional as F
+from torch_geometric.loader import DataLoader
 
 from graphrnn_v2.models import GraphRNN_S
 from graphrnn_v2.data import CommunityDataset, RNNTransform
@@ -36,11 +37,14 @@ for epoch in tqdm(range(3000)):
         optimizer.zero_grad()
 
         # sort the batch by the length of the sequences
-        lengths = batch.lengths.sort(descending=True)[1]
+        # TODO
 
-        output_sequences = model(batch.sequences[:-1], batch.lengths)
+        x = batch.x.view(batch.num_graphs, -1, M)
+        y = batch.y.view(batch.num_graphs, -1, M)
 
-        loss = F.binary_cross_entropy(output_sequences, batch.sequences[1:])
+        output_sequences = model(x, batch.length)
+
+        loss = F.binary_cross_entropy(output_sequences, y)
         loss.backward()
         optimizer.step()
     scheduler.step()

@@ -29,12 +29,14 @@ class EncodeGraphRNNFeature(T.BaseTransform):
         N = adj.shape[1]
         data.sequences = torch.flip(self.view_lower_bands(adj, self.M), dims=[1])
 
-        # add row of ones to the beginning of the sequences
-        data.sequences = torch.cat([torch.ones(1, self.M), data.sequences], dim=0)
+        # add SOS (row of ones) and EOS (row of zeros)
+        data.sequences = torch.cat([torch.ones(1, self.M), data.sequences, torch.zeros(1, self.M)], dim=0)
 
-        data.lengths = torch.ones(N, dtype=torch.long) * self.M
-        # after the first row the first M - 1 sequences are not full length
-        data.lengths[1 : self.M] = torch.arange(1, self.M, dtype=torch.long)[: min(self.M - 1, N - 1)]
+        # data.lengths = torch.ones(N, dtype=torch.long) * self.M
+        # # after the first row the first M - 1 sequences are not full length
+        # data.lengths[1 : self.M] = torch.arange(1, self.M, dtype=torch.long)[: min(self.M - 1, N - 1)]
+
+        data.length = data.sequences[:-1].shape[0]
 
         data.x = data.sequences[:-1]
         data.y = data.sequences[1:]

@@ -48,6 +48,7 @@ class GraphRNN_S(nn.Module):
             nn.Linear(hidden_size, output_embedding_size),
             nn.ReLU(),
             nn.Linear(output_embedding_size, adjacency_size),
+            nn.Sigmoid(),
         )
 
     def forward(self, input_sequences, input_length):

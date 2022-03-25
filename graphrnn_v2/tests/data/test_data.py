@@ -18,18 +18,20 @@ def test_debug(dataset_cls, M):
     print(data.sequences)
 
     shapes_equal = lambda x, y: len(x) == len(y) and all(x[i] == y[i] for i in range(len(x)))
-    assert shapes_equal(data.sequences.shape, [data.num_nodes - 1, M])
+    assert shapes_equal(data.sequences.shape, [data.num_nodes, M])
+    # first row should be all ones
+    assert torch.all(data.sequences[0] == 1)
 
-    for i in range(data.num_nodes - 1):
-        node_idx_of_row = i + 1
-        if i < M - 1:
-            assert data.lengths[i] == i + 1
+    for i in range(1, data.num_nodes):
+        node_idx_of_row = i
+        if i < M:
+            assert data.lengths[i] == i
         else:
             assert data.lengths[i] == M
 
         for j in range(M):
             # the index of the node that is referred to at batch.sequences[i, j]
-            node_idx = i - j
+            node_idx = i - j - 1
             print(i, j, "->", node_idx)
 
             if i < M and j > i:

@@ -4,6 +4,7 @@ import networkx as nx
 
 from torch_geometric import transforms as T
 
+
 class EncodeGraphRNNFeature(T.BaseTransform):
     def __init__(self, M):
         self.M = M
@@ -27,10 +28,16 @@ class EncodeGraphRNNFeature(T.BaseTransform):
         adj = torch_geometric.utils.to_dense_adj(data.edge_index)
         N = adj.shape[1]
         data.sequences = torch.flip(self.view_lower_bands(adj, self.M), dims=[1])
-        data.lengths = torch.ones(N, dtype=torch.long) * self.M
 
-        # the first M - 1 sequences are not full length
-        data.lengths[: self.M - 1] = torch.arange(self.M, dtype=torch.long)[1 : min(self.M, N) + 1]
+        # add row of ones to the beginning of the sequences
+        data.sequences = torch.cat([torch.ones(1, self.M), data.sequences], dim=0)
+
+        data.lengths = torch.ones(N, dtype=torch.long) * self.M
+        # after the first row the first M - 1 sequences are not full length
+        data.lengths[1 : self.M] = torch.arange(1, self.M, dtype=torch.long)[: min(self.M - 1, N - 1)]
+
+        data.x = data.sequences[:-1]
+        data.y = data.sequences[1:]
         return data
 
 

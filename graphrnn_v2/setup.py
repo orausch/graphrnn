@@ -1,3 +1,3 @@
 from setuptools import setup
 
-setup(name='graphrnn_v2')
+setup(name="graphrnn_v2")

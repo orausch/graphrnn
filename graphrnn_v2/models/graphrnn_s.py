@@ -19,7 +19,8 @@ class GraphRNN_S(nn.Module):
         @param adjacency_embedding_size: If embed_first, then
             Size of the embedding of the adjacency vectors before feeding it to the RNN cell.
         @param hidden_size: Size of the hidden vectors of the RNN cell.
-        @param output_embedding:
+        @param num_layers: Number of stacked RNN layers
+        @param output_embedding_size: Size of the embedding of the edge_level MLP.
         """
         super().__init__()
         if embed_first:
@@ -27,21 +28,17 @@ class GraphRNN_S(nn.Module):
                 nn.Linear(adjacency_size, adjacency_embedding_size),
                 nn.ReLU(),
             )
-            self.rnn = nn.RNN(
-                input_size=adjacency_embedding_size,
-                hidden_size=hidden_size,
-                num_layers=num_layers,
-                batch_first=True,
-            )
-
+            input_to_rnn_size = adjacency_embedding_size
         else:
             self.embedding = nn.Identity()
-            self.rnn = nn.RNN(
-                input_size=adjacency_size,
-                hidden_size=hidden_size,
-                num_layers=num_layers,
-                batch_first=True,
-            )
+            input_to_rnn_size = adjacency_size
+
+        self.rnn = nn.RNN(
+            input_size=input_to_rnn_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            batch_first=True,
+        )
         self.hidden = None
 
         self.adjacency_mlp = nn.Sequential(

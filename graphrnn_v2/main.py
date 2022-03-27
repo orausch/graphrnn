@@ -5,6 +5,7 @@ Run the graphrnn_v2 model on community graphs.
 from tqdm import tqdm
 
 import torch
+from torch.nn.utils import rnn as rnnutils
 import torch.nn.functional as F
 from torch_geometric.loader import DataLoader
 
@@ -16,7 +17,7 @@ M = 80
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dataset = CommunityDataset(transform=RNNTransform(M=M))
-dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+dataloader = DataLoader(dataset, batch_size=2, shuffle=True, num_workers=4)
 
 model = GraphRNN_S(
     adjacency_size=M,
@@ -31,22 +32,31 @@ optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[400, 1000], gamma=0.3)
 
 model.train()
+model = model.to(device)
 for epoch in tqdm(range(3000)):
     for batch in dataloader:
-        batch = batch.to(device)
         optimizer.zero_grad()
 
-        # sort the batch by the length of the sequences
-        # TODO
-        # FIXME: Batches in PyG are structured differently from batches in standard pytorch.
-        # FIXME: We might have to update the forward method in the model.
+        # sort lengths
+        lengths = batch.length
+        sorted_lengths, sorted_idx = torch.sort(lengths, descending=True)
 
-        x = batch.x.view(batch.num_graphs, -1, M)
-        y = batch.y.view(batch.num_graphs, -1, M)
+        # reorder the batch vector
+        ordered_batch = sorted_idx[batch.batch]
 
-        output_sequences = model(x, batch.length)
+        # pad to the same length
+        padded_x = rnnutils.pad_sequence(
+            [batch.x[ordered_batch == i] for i in range(batch.num_graphs)], batch_first=True
+        )
+        padded_y = rnnutils.pad_sequence(
+            [batch.y[ordered_batch == i] for i in range(batch.num_graphs)], batch_first=True
+        )
 
-        loss = F.binary_cross_entropy(output_sequences, y)
+        padded_x, padded_y = padded_x.to(device), padded_y.to(device)
+
+        output_sequences = model(padded_x, sorted_lengths)
+
+        loss = F.binary_cross_entropy(output_sequences, padded_y)
         loss.backward()
         optimizer.step()
     scheduler.step()

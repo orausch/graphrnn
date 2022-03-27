@@ -6,44 +6,56 @@ import torch_geometric
 
 from graphrnn_v2.data import DebugDataset, GridDataset, RNNTransform
 
+min_M = {
+    "DebugDataset": 3,
+    "GridDataset": 40,
+}
+
 
 @pytest.mark.parametrize("dataset_cls", [DebugDataset, GridDataset])
-@pytest.mark.parametrize("M", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+@pytest.mark.parametrize("M", [1, 2, 3, 40, 50])
 def test_debug(dataset_cls, M):
     dataset = dataset_cls(transform=RNNTransform(M=M))
 
     data = random.choice(dataset)
 
     G = torch_geometric.utils.to_networkx(data)
-    print(data.sequences)
+    print(data.x)
+    print(data.y)
 
     shapes_equal = lambda x, y: len(x) == len(y) and all(x[i] == y[i] for i in range(len(x)))
-    assert shapes_equal(data.sequences.shape, [data.num_nodes, M])
-    # first row should be all ones
-    assert torch.all(data.sequences[0] == 1)
+    assert shapes_equal(data.x.size(), [data.num_nodes, M])
+    assert shapes_equal(data.y.size(), [data.num_nodes, M])
+    # First input row should be all ones (SOS) and last output row should be all zeros (EOS).
+    assert torch.all(data.x[0] == 1)
+    assert torch.all(data.y[-1] == 0)
 
-    for i in range(1, data.num_nodes):
-        node_idx_of_row = i
-        if i < M:
-            assert data.lengths[i] == i
-        else:
-            assert data.lengths[i] == M
+    for idx_a in range(1, data.num_nodes):
+        for idx_b in range(idx_a - 1, -1, -1):
+            # The indices (i,j) referring to the edge idx_a <-> idx_b.
+            i = idx_a
+            j = idx_a - idx_b - 1
+            print(f"{idx_a} -> {idx_b} in data.x at position {(i,j)}")
 
-        for j in range(M):
-            # the index of the node that is referred to at batch.sequences[i, j]
-            node_idx = i - j - 1
-            print(i, j, "->", node_idx)
-
-            if i < M and j > i:
-                # if we are invalid, the value should be zero
-                assert data.sequences[i, j] == 0
-            else:
-                # if valid, the value should be 1 if the nodes are adjacent
-                adjacent = node_idx in G.neighbors(node_idx_of_row)
-                if adjacent:
-                    assert data.sequences[i, j] == 1
-                else:
-                    assert data.sequences[i, j] == 0
+            if M >= min_M[dataset_cls.__name__]:  # All edges are represented in data.x
+                if idx_a - idx_b <= M:  # Edge captured by the matrix.
+                    adjacent = idx_b in G.neighbors(idx_a)
+                    assert data.x[i, j] == adjacent
+                else:  # Edge not captured by the matrix should be safe.
+                    print(torch_geometric.utils.to_dense_adj(data.edge_index))
+                    assert idx_b not in G.neighbors(idx_a)
+            else:  # Not all edges are represented in data.x
+                if idx_a - idx_b <= M:  # Edge captured by the matrix.
+                    adjacent = idx_b in G.neighbors(idx_a)
+                    assert data.x[i, j] == adjacent
+                else:  # Edge not captured by the matrix should not be checked.
+                    pass
+        if idx_a < M:
+            # Same meaning for (i,j) as above.
+            assert data.relevant_adj_size[idx_a] == idx_a
+            i = idx_a
+            for j in range(idx_a, M):
+                assert data.x[i, j] == 0
 
 
 def test_grid_runs():

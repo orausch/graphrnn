@@ -3,8 +3,9 @@ import torch
 from graphrnn_v2.models.graphrnn_s import GraphRNN_S
 
 
-def test_graphrnn_s():
+def test_graphrnn_s_forward():
     M = 3
+    max_n_node = 5
     batch_size = 4
 
     model = GraphRNN_S(
@@ -50,5 +51,9 @@ def test_graphrnn_s():
         ]
     )
 
+    assert input_sequences.size(0) == batch_size
+    assert max(input_length) == max_n_node
+
     output_sequences = model(input_sequences, input_length)
-    print(output_sequences.size())
+    assert output_sequences.size() == (batch_size, max_n_node, M)
+    assert (output_sequences <= 1).all() and (output_sequences >= 0).all()

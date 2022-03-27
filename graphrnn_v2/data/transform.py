@@ -19,6 +19,7 @@ class EncodeGraphRNNFeature(T.BaseTransform):
         :result: dimension N x M; the M bands above the diagonal
         """
         N = adj.shape[1]
+        # FIXME: This seems like it keeps adj in the same shape. Any clue?
         adj = adj.reshape(N, N)
         padded_adj = torch.zeros((N + M - 1, N))
         padded_adj[M - 1 :, :] = adj
@@ -27,19 +28,22 @@ class EncodeGraphRNNFeature(T.BaseTransform):
     def __call__(self, data):
         adj = torch_geometric.utils.to_dense_adj(data.edge_index)
         N = adj.shape[1]
-        data.sequences = torch.flip(self.view_lower_bands(adj, self.M), dims=[1])
+        sequences = torch.flip(self.view_lower_bands(adj, self.M), dims=[1])
 
-        # add SOS (row of ones) and EOS (row of zeros)
-        data.sequences = torch.cat([torch.ones(1, self.M), data.sequences, torch.zeros(1, self.M)], dim=0)
+        # Add SOS (row of ones) and EOS (row of zeros).
+        sequences = torch.cat([torch.ones(1, self.M), sequences, torch.zeros(1, self.M)], dim=0)
 
-        # data.lengths = torch.ones(N, dtype=torch.long) * self.M
-        # # after the first row the first M - 1 sequences are not full length
-        # data.lengths[1 : self.M] = torch.arange(1, self.M, dtype=torch.long)[: min(self.M - 1, N - 1)]
+        # The first M rows can only be connected to at most M-1 nodes sequences
+        # So their sequence vector is not full length
+        # Record the relevant adjacency size to include it in the loss function.
+        data.relevant_adj_size = torch.ones(N, dtype=torch.long) * self.M
+        data.relevant_adj_size[1 : self.M] = torch.arange(1, self.M, dtype=torch.long)[: min(self.M - 1, N - 1)]
 
-        data.length = data.sequences[:-1].shape[0]
+        # FIXME: Wouldn't data.length <- data.num_nodes be more explicit here? We can even omit the line as use num_nodes.
+        data.length = sequences[:-1].shape[0]
 
-        data.x = data.sequences[:-1]
-        data.y = data.sequences[1:]
+        data.x = sequences[:-1]
+        data.y = sequences[1:]
         return data
 
 
@@ -57,10 +61,10 @@ class BFS(T.BaseTransform):
 
         start_node = torch.randint(0, data.num_nodes, (1,)).item()
 
-        # get the breadth-first search order
+        # Get the breadth-first search order.
         bfs_order = [start_node] + [n for _, n in nx.bfs_edges(G, start_node)]
         perm = torch.tensor(bfs_order).argsort()
-
+        # FIXME: Shouldn't x be permuted as well? x <- x[bfs_order] would do the job. (It's always none currently but still ...)
         return torch_geometric.data.Data(x=x, edge_index=perm[edge_index], num_nodes=data.num_nodes)
 
 

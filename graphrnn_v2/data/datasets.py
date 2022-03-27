@@ -24,8 +24,6 @@ class DebugDataset(data.InMemoryDataset):
 
     (0)---(1)
      |     |
-     |     |
-     |     |
     (2)---(3)
       \   /
        (4)
@@ -46,8 +44,11 @@ class CommunityDataset(data.InMemoryDataset):
     """
 
     @staticmethod
-    def generate_community_graph(community_sizes, probability_inter_community=0.01):
-        graphs = [nx.gnp_random_graph(community_sizes[i], 0.7, seed=i) for i in range(len(community_sizes))]
+    def generate_community_graph(community_sizes, probability_intra_community=0.7, probability_inter_community=0.01):
+        graphs = [
+            nx.gnp_random_graph(community_sizes[i], probability_intra_community, seed=i)
+            for i in range(len(community_sizes))
+        ]
         G = nx.disjoint_union_all(graphs)
         communities = [G.subgraph(c) for c in nx.connected_components(G)]
 
@@ -77,7 +78,7 @@ class CommunityDataset(data.InMemoryDataset):
             torch_geometric.utils.from_networkx(
                 self.generate_community_graph(community_sizes, probability_inter_community=0.01)
             )
-            for k in range(3000)
+            for _ in range(3000)
         ]
 
         self.data, self.slices = self.collate(graphs)

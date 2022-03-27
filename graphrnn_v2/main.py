@@ -38,6 +38,8 @@ for epoch in tqdm(range(3000)):
 
         # sort the batch by the length of the sequences
         # TODO
+        # FIXME: Batches in PyG are structured differently from batches in standard pytorch.
+        # FIXME: We might have to update the forward method in the model.
 
         x = batch.x.view(batch.num_graphs, -1, M)
         y = batch.y.view(batch.num_graphs, -1, M)

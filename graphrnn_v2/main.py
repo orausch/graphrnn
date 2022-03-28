@@ -6,6 +6,8 @@ import itertools
 
 from tqdm import tqdm
 
+from torch.cuda import nvtx
+
 import wandb
 
 import torch
@@ -15,6 +17,42 @@ from torch_geometric.loader import DataLoader
 
 from graphrnn_v2.models import GraphRNN_S
 from graphrnn_v2.data import CommunityDataset, RNNTransform
+
+
+def pack_stacked_sequence(stack, lengths, sorted_idx=None):
+    """
+    Create a PackedSequence from a tensor containing stacked sequences
+    :param stack: Tensor of shape (sum(lengths), *)
+    :param lengths: lengths of the sequences in the stacked tensor. Must be sorted in descending order.
+    :return: PackedSequence
+    """
+    lengths = torch.tensor(lengths)
+
+    # compute where each sequence starts
+    seq_starts = torch.zeros((len(lengths),), dtype=torch.long)
+    seq_starts[1:] = lengths.cumsum(0)[:-1]
+
+    if sorted_idx is None:
+        # sort the lengths
+        sorted_lengths, sorted_idx = lengths.sort(0, descending=True)
+        seq_starts = seq_starts[sorted_idx]
+    else:
+        sorted_lengths = lengths[sorted_idx]
+        seq_starts = seq_starts[sorted_idx]
+
+    idx = []
+    batch_sizes = []
+    for i in range(sorted_lengths[0]):
+        seq_starts = seq_starts[sorted_lengths > i]
+        idx.append(seq_starts.clone())
+        batch_sizes.append(seq_starts.size(0))
+        seq_starts += 1
+
+    idx = torch.cat(idx)
+    batch_sizes = torch.tensor(batch_sizes, dtype=torch.long)
+
+    # construct the packed sequence
+    return rnnutils.PackedSequence(stack[idx], batch_sizes=batch_sizes, sorted_indices=sorted_idx.to(stack.device))
 
 
 if __name__ == "__main__":
@@ -42,31 +80,37 @@ if __name__ == "__main__":
     for epoch in tqdm(range(3000)):
         for batch_idx, batch in enumerate(itertools.islice(dataloader, 32)):
 
+            nvtx.range_push("batch")
             start_time = time.time()
 
             optimizer.zero_grad()
 
+            nvtx.range_push("sorting")
             # sort lengths
-            lengths = batch.length
-            sorted_lengths, sorted_idx = torch.sort(lengths, descending=True)
+            lengths = torch.tensor(batch.length)
+            sorted_lengths, sorted_idx = lengths.sort(0, descending=True)
 
-            # reorder the batch vector
-            ordered_batch = sorted_idx[batch.batch]
+            x, y = batch.x.to(device), batch.y.to(device)
 
-            # pad to the same length
-            padded_x = rnnutils.pad_sequence(
-                [batch.x[ordered_batch == i] for i in range(batch.num_graphs)], batch_first=True
-            )
-            padded_y = rnnutils.pad_sequence(
-                [batch.y[ordered_batch == i] for i in range(batch.num_graphs)], batch_first=True
-            )
+            # pack the sequences
+            packed_x = pack_stacked_sequence(x, lengths, sorted_idx=sorted_idx)
+            packed_y = pack_stacked_sequence(y, lengths, sorted_idx=sorted_idx)
 
-            padded_x, padded_y = padded_x.to(device), padded_y.to(device)
+            nvtx.range_pop()
 
-            output_sequences = model(padded_x, sorted_lengths)
+            nvtx.range_push("model")
+            output_sequences = model(packed_x, sorted_lengths)
+            nvtx.range_pop()
+
+            padded_y, _ = rnnutils.pad_packed_sequence(packed_y, batch_first=True)
 
             loss = F.binary_cross_entropy(output_sequences, padded_y)
+            nvtx.range_push("backward")
             loss.backward()
+            optimizer.step()
+            nvtx.range_pop()
+
+            nvtx.range_pop()
 
             batch_time = time.time() - start_time
 
@@ -80,5 +124,4 @@ if __name__ == "__main__":
                 )
             )
 
-            optimizer.step()
         scheduler.step()

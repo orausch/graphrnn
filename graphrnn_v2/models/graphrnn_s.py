@@ -56,8 +56,7 @@ class GraphRNN_S(nn.Module):
             num_nodes for each graph in the batch. Because graph-sequences where padded to max_num_nodes.
         """
 
-        input_sequences = self.embedding(input_sequences)
-        input_sequences = pack_padded_sequence(input_sequences, input_length, batch_first=True)
+        embedded_vectors = self.embedding(input_sequences)
         output_sequences, hidden = self.rnn(input_sequences)
         output_sequences, output_length = pad_packed_sequence(output_sequences, batch_first=True)
         output_sequences = self.adjacency_mlp(output_sequences)

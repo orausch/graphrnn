@@ -43,28 +43,24 @@ if __name__ == "__main__":
         for batch_idx, batch in enumerate(itertools.islice(dataloader, 32)):
 
             batch = batch.to(device)
-
             start_time = time.time()
-
             optimizer.zero_grad()
 
-            # sort lengths
-            lengths = batch.length.cpu()
-            # torch.split needs a tuple of ints
-            tuple_lengths = tuple(lengths.tolist())
+            # (1) Transform the batched graphs to a standard mini-batch of dimensions (B, L, M).
+            # Where L is max_num_nodes in the batch.
+            lengths = batch.length.cpu()  # torch.split needs a tuple of ints.
+            lengths_tuple = tuple(lengths.tolist())
+            x_padded = rnnutils.pad_sequence(torch.split(batch.x, lengths_tuple), batch_first=True)
+            y_padded = rnnutils.pad_sequence(torch.split(batch.y, lengths_tuple), batch_first=True)
 
-            padded_x = rnnutils.pad_sequence(torch.split(batch.x, tuple_lengths), batch_first=True)
-            padded_y = rnnutils.pad_sequence(torch.split(batch.y, tuple_lengths), batch_first=True)
-
-            # sort by length
+            # Sort batch by graph length, needed for the graph-level RNN.
             sorted_lengths, sorted_idx = lengths.sort(0, descending=True)
-            padded_x = padded_x[sorted_idx]
-            padded_y = padded_y[sorted_idx]
+            x_padded = x_padded[sorted_idx]
+            y_padded = y_padded[sorted_idx]
 
-            output_sequences = model(padded_x, sorted_lengths)
+            output_sequences = model(x_padded, sorted_lengths)
 
-            loss = F.binary_cross_entropy(output_sequences, padded_y)
-
+            loss = F.binary_cross_entropy(output_sequences, y_padded)
             loss.backward()
             optimizer.step()
 

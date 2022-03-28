@@ -42,31 +42,31 @@ if __name__ == "__main__":
     for epoch in tqdm(range(3000)):
         for batch_idx, batch in enumerate(itertools.islice(dataloader, 32)):
 
+            batch = batch.to(device)
+
             start_time = time.time()
 
             optimizer.zero_grad()
 
             # sort lengths
-            lengths = batch.length
-            sorted_lengths, sorted_idx = torch.sort(lengths, descending=True)
+            lengths = batch.length.cpu()
+            # torch.split needs a tuple of ints
+            tuple_lengths = tuple(lengths.tolist())
 
-            # reorder the batch vector
-            ordered_batch = sorted_idx[batch.batch]
+            padded_x = rnnutils.pad_sequence(torch.split(batch.x, tuple_lengths), batch_first=True)
+            padded_y = rnnutils.pad_sequence(torch.split(batch.y, tuple_lengths), batch_first=True)
 
-            # pad to the same length
-            padded_x = rnnutils.pad_sequence(
-                [batch.x[ordered_batch == i] for i in range(batch.num_graphs)], batch_first=True
-            )
-            padded_y = rnnutils.pad_sequence(
-                [batch.y[ordered_batch == i] for i in range(batch.num_graphs)], batch_first=True
-            )
-
-            padded_x, padded_y = padded_x.to(device), padded_y.to(device)
+            # sort by length
+            sorted_lengths, sorted_idx = lengths.sort(0, descending=True)
+            padded_x = padded_x[sorted_idx]
+            padded_y = padded_y[sorted_idx]
 
             output_sequences = model(padded_x, sorted_lengths)
 
             loss = F.binary_cross_entropy(output_sequences, padded_y)
+
             loss.backward()
+            optimizer.step()
 
             batch_time = time.time() - start_time
 
@@ -80,5 +80,4 @@ if __name__ == "__main__":
                 )
             )
 
-            optimizer.step()
         scheduler.step()

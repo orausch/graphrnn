@@ -57,6 +57,7 @@ class GraphRNN_S(nn.Module):
         """
 
         input_sequences = self.embedding(input_sequences)
+        # pack for the rnn
         input_sequences = pack_padded_sequence(input_sequences, input_length, batch_first=True)
         output_sequences, hidden = self.rnn(input_sequences)
         output_sequences, output_length = pad_packed_sequence(output_sequences, batch_first=True)

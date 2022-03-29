@@ -1,7 +1,6 @@
+import networkx as nx
 import torch
 import torch_geometric.utils
-import networkx as nx
-
 from torch_geometric import transforms as T
 
 
@@ -52,6 +51,16 @@ class EncodeGraphRNNFeature(T.BaseTransform):
         bands = torch.flip(y, dims=[1])
         adj = EncodeGraphRNNFeature.bands_to_matrix(bands)
         return adj
+
+    @staticmethod
+    def get_adjacencies_from_sequences(graph_sequences, lengths):
+        """
+        FIXME: Can we vectorize the inverse method to get rid of the for loop?
+        """
+        return [
+            EncodeGraphRNNFeature.inverse(graph_sequence[: num_nodes - 1])
+            for graph_sequence, num_nodes in zip(graph_sequences, lengths)
+        ]
 
     def __call__(self, data):
         adj = torch_geometric.utils.to_dense_adj(data.edge_index)

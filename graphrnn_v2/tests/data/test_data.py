@@ -4,7 +4,7 @@ import pytest
 import torch
 import torch_geometric
 
-from graphrnn_v2.data import DebugDataset, GridDataset, RNNTransform
+from graphrnn_v2.data import DebugDataset, GridDataset, RNNTransform, EncodeGraphRNNFeature
 
 min_M = {
     "DebugDataset": 3,
@@ -56,6 +56,19 @@ def test_debug(dataset_cls, M):
             i = idx_a
             for j in range(idx_a, M):
                 assert data.x[i, j] == 0
+
+
+def test_bands_transform():
+    M = 3
+    random_adj = torch.rand(5, 5)
+    bands = EncodeGraphRNNFeature.extract_bands(random_adj, M)
+    inverse = EncodeGraphRNNFeature.bands_to_matrix(bands)
+
+    # construct a mask to zero everything else in random_adj
+    bool_tensor = torch.ones(5, dtype=torch.bool)
+    bands_mask = torch.diag(bool_tensor[:-1], 1) | torch.diag(bool_tensor[:-2], 2) | torch.diag(bool_tensor[:-3], 3)
+    random_adj[~bands_mask] = 0
+    assert torch.allclose(random_adj, inverse)
 
 
 def test_grid_runs():

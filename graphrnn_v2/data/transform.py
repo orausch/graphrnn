@@ -10,25 +10,41 @@ class EncodeGraphRNNFeature(T.BaseTransform):
         self.M = M
 
     @staticmethod
-    def view_lower_bands(adj, M):
+    def extract_bands(adj, M):
         """
-        Uses stride tricks to create a view of adj containing the
-        M bands above the diagonal of the given square matrix.
+        Uses stride tricks to extract the M bands above the diagonal of the
+        given square matrix.
+
         :param adj: dimension N x N
         :param M: number of bands above the diagonal to return
-        :result: dimension N x M; the M bands above the diagonal
+        :returns: dimension (N - 1) x M; the M bands above the diagonal
         """
         N = adj.shape[1]
-        # FIXME: This seems like it keeps adj in the same shape. Any clue?
+        # py-g inserts a batch dimension as the first dimension, this removes it
         adj = adj.reshape(N, N)
         padded_adj = torch.zeros((N + M - 1, N))
         padded_adj[M - 1 :, :] = adj
         return padded_adj.as_strided(size=(N - 1, M), stride=(N + 1, N), storage_offset=1)
 
+    @staticmethod
+    def bands_to_matrix(bands):
+        """
+        Given M bands above the diagonal of a square matrix, return the full matrix.
+
+        :param bands: dimension N x M; the M bands above the diagonal
+        :returns: the corresponding matrix of dimension N x N
+        """
+        M = bands.shape[1]
+        N = bands.shape[0] + 1
+        padded_adj = torch.zeros((N + M - 1, N))
+        view = padded_adj.as_strided(size=(N - 1, M), stride=(N + 1, N), storage_offset=1)
+        view[:, :] = bands
+        return padded_adj[M - 1 :, :]
+
     def __call__(self, data):
         adj = torch_geometric.utils.to_dense_adj(data.edge_index)
         N = adj.shape[1]
-        sequences = torch.flip(self.view_lower_bands(adj, self.M), dims=[1])
+        sequences = torch.flip(self.extract_bands(adj, self.M), dims=[1])
 
         # Add SOS (row of ones) and EOS (row of zeros).
         sequences = torch.cat([torch.ones(1, self.M), sequences, torch.zeros(1, self.M)], dim=0)

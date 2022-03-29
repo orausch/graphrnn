@@ -1,6 +1,6 @@
 import random
-import pytest
 
+import pytest
 import torch
 import torch_geometric
 
@@ -35,7 +35,7 @@ def test_debug(dataset_cls, M):
             # The indices (i,j) referring to the edge idx_a <-> idx_b.
             i = idx_a
             j = idx_a - idx_b - 1
-            print(f"{idx_a} -> {idx_b} in data.x at position {(i,j)}")
+            print(f"{idx_a} -> {idx_b} in data.x at position {(i, j)}")
 
             if M >= min_M[dataset_cls.__name__]:  # All edges are represented in data.x
                 if idx_a - idx_b <= M:  # Edge captured by the matrix.
@@ -69,6 +69,22 @@ def test_bands_transform():
     bands_mask = torch.diag(bool_tensor[:-1], 1) | torch.diag(bool_tensor[:-2], 2) | torch.diag(bool_tensor[:-3], 3)
     random_adj[~bands_mask] = 0
     assert torch.allclose(random_adj, inverse)
+
+
+def test_reverse_debug_band():
+    graph = DebugDataset(None)[0]
+    correct_adj = torch_geometric.utils.to_dense_adj(graph.edge_index)
+
+    M = 3
+    encoder = EncodeGraphRNNFeature(M)
+    encoded_graph = encoder(graph)
+    # Bands correspond to adjacency vectors of node 1 to node n-1.
+    # First node is indexed 0. Does not include SOS nor EOS.
+    bands = encoded_graph.y[:-1]
+    adj = encoder.bands_to_matrix(bands)
+
+    assert adj.sum() == graph.num_edges // 2
+    assert adj.allclose(correct_adj.triu())
 
 
 def test_grid_runs():

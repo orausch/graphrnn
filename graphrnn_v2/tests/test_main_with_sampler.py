@@ -14,7 +14,7 @@ from torch_geometric.loader import DataLoader
 from tqdm import tqdm
 
 from graphrnn_v2.data import RNNTransform, EncodeGraphRNNFeature
-from graphrnn_v2.data import TriangleDebugDataset, DebugDataset
+from graphrnn_v2.data import MixedDebugDataset
 from graphrnn_v2.models import GraphRNN_S
 
 
@@ -22,15 +22,15 @@ def test_main():
     M = 3
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dataset = DebugDataset(transform=RNNTransform(M=M))
+    dataset = MixedDebugDataset(transform=RNNTransform(M=M))
     dataloader = DataLoader(dataset, batch_size=32, num_workers=0, shuffle=True)
 
     model = GraphRNN_S(
         adjacency_size=M,
         embed_first=True,
         adjacency_embedding_size=16,
-        hidden_size=32,
-        num_layers=2,
+        hidden_size=64,
+        num_layers=4,
         output_embedding_size=16,
     )
 
@@ -65,11 +65,11 @@ def test_main():
 
     print(loss)
 
-    output_sequences, lengths = model.sample(4, device)
+    output_sequences, lengths = model.sample(16, device)
     adjs = EncodeGraphRNNFeature.get_adjacencies_from_sequences(output_sequences, lengths)
     for adj in adjs:
         graph = nx.from_numpy_array(adj.numpy())
-        nx.draw_spectral(graph)
+        nx.draw(graph)
         plt.show()
 
 

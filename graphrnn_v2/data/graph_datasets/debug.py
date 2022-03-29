@@ -23,6 +23,24 @@ class DebugDataset(data.InMemoryDataset):
         self.data, self.slices = self.collate(graphs)
 
 
+class TriangleDebugDataset(data.InMemoryDataset):
+    """
+    Creates a dataset containing only the following triangle debug graph. Permutations have no effect.
+
+    (0)---(1)
+     |   /
+     | /
+    (2)
+    """
+
+    def __init__(self, transform):
+        super().__init__(".", transform)
+        self.G = nx.Graph()
+        self.G.add_edges_from([(0, 1), (0, 2), (1, 2)])
+        graphs = [torch_geometric.utils.from_networkx(self.G)]
+        self.data, self.slices = self.collate(graphs)
+
+
 class MixedDebugDataset(data.InMemoryDataset):
     """
     Creates a dataset containing the following two debug graphs.

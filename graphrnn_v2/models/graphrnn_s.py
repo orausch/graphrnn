@@ -53,13 +53,8 @@ class GraphRNN_S(nn.Module):
             nn.Sigmoid(),
         )
 
-    def init_hidden_layer(self, batch_size, device):
-        self.hidden = torch.zeros(self.num_layers, batch_size, self.hidden_size, device=device)
-
-    def forward(self, input_sequences, input_length):
+    def forward(self, input_sequences, input_length, sampling=False):
         """
-        Note: Remember to initialize or set self.hidden before calling forward().
-
         @param input_sequences: (batch_size, max_num_nodes, adjacency_size=M)
             For each graph in the batch, the sequence of adjacency vectors (including the first SOS).
         @param input_length: (batch_size,)
@@ -69,46 +64,45 @@ class GraphRNN_S(nn.Module):
 
         # Pack sequences for RNN efficiency.
         input_sequences = pack_padded_sequence(input_sequences, input_length, batch_first=True)
-        output_sequences, self.hidden = self.rnn(input_sequences, self.hidden)
-        output_sequences, output_length = pad_packed_sequence(output_sequences, batch_first=True)
+        if sampling:
+            output_sequences, self.hidden = self.rnn(input_sequences, self.hidden)
+        else:
+            output_sequences, self.hidden = self.rnn(input_sequences)
         # Unpack RNN output.
+        output_sequences, output_length = pad_packed_sequence(output_sequences, batch_first=True)
 
         output_sequences = self.adjacency_mlp(output_sequences)
-
         return output_sequences
 
-
-class GraphRNN_S_Sampler:
-    def __init__(self, model, device):
-        self.model = model
-        self.device = device
-
-    def sample_graph_sequences(self, batch_size):
+    def sample(self, batch_size, device):
         """
-        Samples a sequences of adjacency vectors defining a graph.
+        Sample a batch of graph sequences.
+        @return: Tensor of size (batch_size, max_num_node, self.adjacency_size) in the same device as the model.
 
-        Note: In the original implementation a max_num_node is used as placeholder for the generated graphs.
+        Note: In the original implementation a max_num_node is used as a placeholder for the generated graphs.
         This makes the assumption that the largest generated graph will have max_num_nodes.
 
-        Instead this implementation makes the assumption that generated graphs are connected.
+        Instead, this implementation makes the assumption that generated graphs are connected.
         This assumption is implicit in the original codebase.
 
         In any case one of the above assumptions has to be made to know when the sampler is done generating a graph.
+        The disconnected graph assumption can be dropped by adding an SOS flag to the model
+        rather than an SOS token which can be confused with a disconnected node.
         """
-        input_sequence = torch.ones(batch_size, 1, self.model.adjacency_size, device=self.device)  # SOS.
+        input_sequence = torch.ones(batch_size, 1, self.adjacency_size, device=device)  # SOS.
         node_id = 0
         input_length = torch.ones(batch_size, dtype=torch.long)
         graph_lengths = torch.ones(batch_size, dtype=torch.long)
 
         # FIXME ME: Using some huge number until we find a better way.
         MAX_NUM_NODE = 1000
-        sequences = torch.zeros((batch_size, MAX_NUM_NODE, self.model.adjacency_size))
+        sequences = torch.zeros(batch_size, MAX_NUM_NODE, self.adjacency_size)
 
         with torch.no_grad():
-            self.model.init_hidden_layer(batch_size, self.device)
+            self.hidden = torch.zeros(self.num_layers, batch_size, self.hidden_size, device=device)
             while input_length.any():
                 node_id += 1
-                output_sequence_probs = self.model(input_sequence, torch.ones(batch_size))
+                output_sequence_probs = self.forward(input_sequence, torch.ones(batch_size), sampling=True)
                 mask = torch.rand_like(output_sequence_probs)
                 output_sequence = torch.gt(output_sequence_probs, mask)
 
@@ -116,7 +110,7 @@ class GraphRNN_S_Sampler:
                 input_length *= output_sequence.any(dim=-1).squeeze()
                 graph_lengths += input_length
 
-                sequences[:, node_id - 1] = input_length.unsqueeze(1).to(self.device) * output_sequence[:, 0]
+                sequences[:, node_id - 1] = input_length.unsqueeze(1).to(device) * output_sequence[:, 0]
                 input_sequence = output_sequence.float()
 
-        return sequences[:, : graph_lengths.int().max()], graph_lengths
+        return sequences[:, : graph_lengths.int().max() - 1], graph_lengths

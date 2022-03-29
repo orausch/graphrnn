@@ -58,7 +58,6 @@ if __name__ == "__main__":
             x_padded = x_padded[sorted_idx]
             y_padded = y_padded[sorted_idx]
 
-            model.init_hidden_layer(batch.num_graphs, device)
             output_sequences = model(x_padded, sorted_lengths)
 
             loss = F.binary_cross_entropy(output_sequences, y_padded)

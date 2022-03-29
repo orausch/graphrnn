@@ -5,31 +5,32 @@ Temporaty "test" until we refactor a train method and use it as a subroutine.
 """
 import itertools
 
+import networkx as nx
 import torch
 import torch.nn.functional as F
+from matplotlib import pyplot as plt
 from torch.nn.utils import rnn as rnnutils
 from torch_geometric.loader import DataLoader
 from tqdm import tqdm
 
-from graphrnn_v2.data import RNNTransform
-from graphrnn_v2.data import TriangleDebugDataset
+from graphrnn_v2.data import RNNTransform, EncodeGraphRNNFeature
+from graphrnn_v2.data import TriangleDebugDataset, DebugDataset
 from graphrnn_v2.models import GraphRNN_S
-from models.graphrnn_s import GraphRNN_S_Sampler
 
 
 def test_main():
     M = 3
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dataset = TriangleDebugDataset(transform=RNNTransform(M=M))
+    dataset = DebugDataset(transform=RNNTransform(M=M))
     dataloader = DataLoader(dataset, batch_size=32, num_workers=0, shuffle=True)
 
     model = GraphRNN_S(
         adjacency_size=M,
         embed_first=True,
         adjacency_embedding_size=16,
-        hidden_size=64,
-        num_layers=4,
+        hidden_size=32,
+        num_layers=2,
         output_embedding_size=16,
     )
 
@@ -55,7 +56,6 @@ def test_main():
             x_padded = x_padded[sorted_idx]
             y_padded = y_padded[sorted_idx]
 
-            model.init_hidden_layer(batch.num_graphs, device)
             output_sequences = model(x_padded, sorted_lengths)
 
             loss = F.binary_cross_entropy(output_sequences, y_padded)
@@ -65,10 +65,12 @@ def test_main():
 
     print(loss)
 
-    sampler = GraphRNN_S_Sampler(model, device)
-    s, l = sampler.sample_graph_sequences(4)
-    print(s)
-    print(l)
+    output_sequences, lengths = model.sample(4, device)
+    for graph_sequence, num_nodes in zip(output_sequences, lengths):
+        adj = EncodeGraphRNNFeature.inverse(graph_sequence[: num_nodes - 1])
+        graph = nx.from_numpy_array(adj.numpy())
+        nx.draw_spectral(graph)
+        plt.show()
 
 
 #   weights = torch.ones_like(padded_y)

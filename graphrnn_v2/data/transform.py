@@ -41,7 +41,8 @@ class EncodeGraphRNNFeature(T.BaseTransform):
         view[:, :] = bands
         return padded_adj[M - 1 :, :]
 
-    def inverse(self, y):
+    @staticmethod
+    def inverse(y):
         """
         Inverse of the __call__ method, given the encoded sequence y
 
@@ -49,7 +50,7 @@ class EncodeGraphRNNFeature(T.BaseTransform):
         :returns: the corresponding adjacency matrix
         """
         bands = torch.flip(y, dims=[1])
-        adj = self.bands_to_matrix(bands)
+        adj = EncodeGraphRNNFeature.bands_to_matrix(bands)
         return adj
 
     def __call__(self, data):

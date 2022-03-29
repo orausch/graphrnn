@@ -17,3 +17,14 @@ def test_mmd():
     y = [np.array([3, 2, 1])]
 
     assert np.allclose(MMD.mmd(x, y), 0.3985251941663839)
+
+    x = [
+        np.arange(0, 5, dtype=np.float64),
+        np.arange(1, 6, dtype=np.float64),
+    ]
+    y = [
+        np.arange(2, 7, dtype=np.float64),
+        np.arange(3, 8, dtype=np.float64),
+    ]
+
+    assert np.allclose(MMD.mmd(x, y), 0.13596405410529133)

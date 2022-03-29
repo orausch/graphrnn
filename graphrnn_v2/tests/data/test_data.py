@@ -81,7 +81,7 @@ def test_reverse_debug_band():
     # Bands correspond to adjacency vectors of node 1 to node n-1.
     # First node is indexed 0. Does not include SOS nor EOS.
     bands = encoded_graph.y[:-1]
-    adj = encoder.bands_to_matrix(bands)
+    adj = encoder.inverse(bands)
 
     assert adj.sum() == graph.num_edges // 2
     assert adj.allclose(correct_adj.triu())

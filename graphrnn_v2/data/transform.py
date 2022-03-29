@@ -41,6 +41,17 @@ class EncodeGraphRNNFeature(T.BaseTransform):
         view[:, :] = bands
         return padded_adj[M - 1 :, :]
 
+    def inverse(self, y):
+        """
+        Inverse of the __call__ method, given the encoded sequence y
+
+        :param y: encoded sequence, without the SOS and EOS tokens
+        :returns: the corresponding adjacency matrix
+        """
+        bands = torch.flip(y, dims=[1])
+        adj = self.bands_to_matrix(bands)
+        return adj
+
     def __call__(self, data):
         adj = torch_geometric.utils.to_dense_adj(data.edge_index)
         N = adj.shape[1]

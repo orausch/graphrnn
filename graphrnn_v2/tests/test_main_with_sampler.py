@@ -66,8 +66,8 @@ def test_main():
     print(loss)
 
     output_sequences, lengths = model.sample(4, device)
-    for graph_sequence, num_nodes in zip(output_sequences, lengths):
-        adj = EncodeGraphRNNFeature.inverse(graph_sequence[: num_nodes - 1])
+    adjs = EncodeGraphRNNFeature.get_adjacencies_from_sequences(output_sequences, lengths)
+    for adj in adjs:
         graph = nx.from_numpy_array(adj.numpy())
         nx.draw_spectral(graph)
         plt.show()

@@ -4,7 +4,7 @@ import pytest
 import torch
 import torch_geometric
 
-from graphrnn_v2.data import DebugDataset, GridDataset, RNNTransform, EncodeGraphRNNFeature
+from graphrnn_v2.data import DebugDataset, MixedDebugDataset, GridDataset, RNNTransform, EncodeGraphRNNFeature
 
 min_M = {
     "DebugDataset": 3,
@@ -72,7 +72,7 @@ def test_bands_transform():
 
 
 def test_reverse_debug_band():
-    graph = DebugDataset(None)[0]
+    graph = MixedDebugDataset(None)[0]
     correct_adj = torch_geometric.utils.to_dense_adj(graph.edge_index)
 
     M = 3
@@ -85,6 +85,21 @@ def test_reverse_debug_band():
 
     assert adj.sum() == graph.num_edges // 2
     assert adj.allclose(correct_adj.triu())
+
+
+def test_reverse_debug_band_with_underfit_m():
+    graph = MixedDebugDataset(None)[0]
+    correct_adj = torch_geometric.utils.to_dense_adj(graph.edge_index)
+
+    M = 1
+    encoder = EncodeGraphRNNFeature(M)
+    encoded_graph = encoder(graph)
+    # Bands correspond to adjacency vectors of node 1 to node n-1.
+    # First node is indexed 0. Does not include SOS nor EOS.
+    bands = encoded_graph.y[:-1]
+    adj = encoder.inverse(bands)
+
+    assert adj.sum() == 3
 
 
 def test_grid_runs():

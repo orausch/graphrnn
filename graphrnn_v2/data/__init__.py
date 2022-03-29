@@ -6,4 +6,4 @@ from .graph_datasets import (
     MixedDebugDataset,
     CommunityDataset,
 )
-from .transform import RNNTransform
+from .transform import RNNTransform, EncodeGraphRNNFeature, BFS

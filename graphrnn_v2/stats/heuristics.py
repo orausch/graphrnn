@@ -14,6 +14,7 @@ class MMD:
         diffs = x - y
         emd = np.zeros(len(x) + 1)
 
+        # FIXME: Can we vectorize this? (potentially using a quick padding trick)
         for col_idx in range(1, len(x)):
             emd[col_idx] = emd[col_idx - 1] + diffs[col_idx - 1]
 
@@ -31,16 +32,17 @@ class MMD:
         assert all(len(x_i.shape) == 1 for x_i in x), "x must be a list of 1D arrays"
         assert all(len(y_i.shape) == 1 for y_i in y), "y must be a list of 1D arrays"
 
-        # normalize values
+        # Normalize values.
         x = [x_i / np.sum(x_i) for x_i in x]
         y = [y_i / np.sum(y_i) for y_i in y]
 
         def pairwise_gaussian_emd(x: np.array, y: np.array) -> float:
-            # normalize length
+            # Normalize length.
             max_ = max(len(x), len(y))
+            # FIXME: max_ is always bigger then len(x) and len(y) by definition. Is the max(0, ...) necessary?
             x = np.concatenate((x, np.zeros(max(0, max_ - len(x)))))
             y = np.concatenate((y, np.zeros(max(0, max_ - len(y)))))
-
+            # FIXME: What if the middle bins are not the same? (e.g. x = [1, 3, 4] and y = [1, 2, 3]).
             emd = MMD.emd(x, y)
             return np.exp(-emd * emd / 2.0)
 

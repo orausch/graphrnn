@@ -16,7 +16,7 @@ class GraphEval:
 
 if __name__ == "__main__":
 
-    # Parse arguments
+    # Parse arguments.
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "predictions", help="predictions file containing serialized list of graphs"
@@ -24,7 +24,7 @@ if __name__ == "__main__":
     parser.add_argument("truth", help="truth file containing serialized list of graphs")
     args = parser.parse_args()
 
-    # Format inputs
+    # Format inputs.
     preds = args.predictions
     tests = args.truth
 

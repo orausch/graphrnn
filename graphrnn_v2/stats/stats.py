@@ -1,6 +1,6 @@
 import networkx as nx
 import numpy as np
-from stats.heuristics import MMD
+from graphrnn_v2.stats.heuristics import MMD
 
 
 class GraphStats:

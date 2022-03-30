@@ -1,7 +1,8 @@
 """
-DELETE ME.
+DELETE ME. (at some point).
 
-Temporaty "test" until we refactor a train method and use it as a subroutine.
+Temporaty "test" until we refactor a main method.
+
 """
 import itertools
 
@@ -13,16 +14,18 @@ from torch.nn.utils import rnn as rnnutils
 from torch_geometric.loader import DataLoader
 from tqdm import tqdm
 
+from graphrnn_v2.stats import GraphStats
 from graphrnn_v2.data import RNNTransform, EncodeGraphRNNFeature
-from graphrnn_v2.data import MixedDebugDataset
+from graphrnn_v2.data import MixedDebugDataset, TriangleDebugDataset
 from graphrnn_v2.models import GraphRNN_S
 
 
-def test_main():
+def test_end_to_end():
     M = 3
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dataset = MixedDebugDataset(transform=RNNTransform(M=M))
+    # FIXME: Use the MixedDebugDataset for a harder test.
+    dataset = TriangleDebugDataset(transform=RNNTransform(M=M))
     dataloader = DataLoader(dataset, batch_size=32, num_workers=0, shuffle=True)
 
     model = GraphRNN_S(
@@ -63,13 +66,18 @@ def test_main():
             optimizer.step()
         scheduler.step()
 
-    print(loss)
+    print(f'{loss=}')
 
-    output_sequences, lengths = model.sample(16, device)
+    output_sequences, lengths = model.sample(32, device)
     adjs = EncodeGraphRNNFeature.get_adjacencies_from_sequences(output_sequences, lengths)
-    for adj in adjs:
-        graph = nx.from_numpy_array(adj.numpy())
-        nx.draw(graph)
+    graphs = [nx.from_numpy_array(adj.numpy()) for adj in adjs]
+
+    test_graphs = TriangleDebugDataset.generate_graphs()
+    degree_mmd = GraphStats.degree(test_graphs, graphs)
+    print(f'{degree_mmd=}')
+
+    for graph in graphs:
+        nx.draw(graph, with_labels=True)
         plt.show()
 
 

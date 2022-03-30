@@ -90,14 +90,14 @@ class GraphRNN_S(nn.Module):
         rather than an SOS token which can be confused with a disconnected node.
         """
         input_sequence = torch.ones(batch_size, 1, self.adjacency_size, device=device)  # SOS.
-        node_id = 0
         input_length = torch.ones(batch_size, dtype=torch.long)
-        graph_lengths = torch.ones(batch_size, dtype=torch.long)
 
         # FIXME ME: Using some huge number until we find a better way.
+        # Can use a toch.cat in an iterative way but that would a priori  be slower.
         MAX_NUM_NODE = 1000
         sequences = torch.zeros(batch_size, MAX_NUM_NODE, self.adjacency_size)
-
+        seq_lengths = torch.zeros(batch_size, dtype=torch.long)
+        node_id = 0
         with torch.no_grad():
             self.hidden = torch.zeros(self.num_layers, batch_size, self.hidden_size, device=device)
             while input_length.any():
@@ -108,9 +108,9 @@ class GraphRNN_S(nn.Module):
 
                 # Identify the EOS sequences and persist them even if model says otherwise.
                 input_length *= output_sequence.any(dim=-1).squeeze()
-                graph_lengths += input_length
+                seq_lengths += input_length
 
                 sequences[:, node_id - 1] = input_length.unsqueeze(1).to(device) * output_sequence[:, 0]
                 input_sequence = output_sequence.float()
 
-        return sequences[:, : graph_lengths.int().max() - 1], graph_lengths
+        return sequences[:, : seq_lengths.max()], seq_lengths

@@ -55,11 +55,13 @@ class EncodeGraphRNNFeature(T.BaseTransform):
     @staticmethod
     def get_adjacencies_from_sequences(graph_sequences, lengths):
         """
+        Graph_sequences[i] consists of the adjacency vectors of nodes 1, 2, ..., lengths[i]
+        In particular it does not contain a vector for node 0.
         FIXME: Can we vectorize the inverse method to get rid of the for loop?
         """
         return [
-            EncodeGraphRNNFeature.inverse(graph_sequence[: num_nodes - 1])
-            for graph_sequence, num_nodes in zip(graph_sequences, lengths)
+            EncodeGraphRNNFeature.inverse(graph_sequence[: seq_length])
+            for graph_sequence, seq_length in zip(graph_sequences, lengths)
         ]
 
     def __call__(self, data):

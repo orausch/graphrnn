@@ -12,10 +12,7 @@ class MMD:
         """
 
         diffs = x - y
-        emd = np.zeros(len(x) + 1)
-
-        for col_idx in range(1, len(x)):
-            emd[col_idx] = emd[col_idx - 1] + diffs[col_idx - 1]
+        emd = np.cumsum(diffs)
 
         return np.sum(np.abs(emd))
 

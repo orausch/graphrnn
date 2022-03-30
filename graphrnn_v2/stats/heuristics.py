@@ -14,7 +14,6 @@ class MMD:
         diffs = x - y
         emd = np.zeros(len(x) + 1)
 
-        # FIXME: Can we vectorize this? (potentially using a quick padding trick)
         for col_idx in range(1, len(x)):
             emd[col_idx] = emd[col_idx - 1] + diffs[col_idx - 1]
 

@@ -18,6 +18,7 @@ from graphrnn_v2.data import (
     TriangleDebugDataset,
     MixedDebugDataset,
     SmallGridDataset,
+    SmallEgoDataset,
     RNNTransform,
     EncodeGraphRNNFeature,
 )
@@ -37,9 +38,9 @@ def plot(graphs, title):
 if __name__ == "__main__":
     wandb.init(project="graphrnn-reproduction", entity="graphnn-reproduction", job_type="v2-test")
     # FIXME: Edit params as you wish.
-    M = 3  # 20, 3, 5
-    Dataset = TriangleDebugDataset  # SmallGridDataset  # TriangleDebugDataset  # MixedDebugDataset
-    sampler_max_num_nodes = 10  # 20, 5, 5
+    M = 15  # 20, 3, 5
+    Dataset = SmallEgoDataset  # SmallGridDataset  # TriangleDebugDataset  # MixedDebugDataset
+    sampler_max_num_nodes = 30  # 20, 5, 5
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     grid_dataset = Dataset(transform=RNNTransform(M=M))

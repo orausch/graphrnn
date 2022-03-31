@@ -5,5 +5,7 @@ from .graph_datasets import (
     TriangleDebugDataset,
     MixedDebugDataset,
     CommunityDataset,
+    EgoDataset,
+    SmallEgoDataset,
 )
 from .transform import RNNTransform, EncodeGraphRNNFeature, BFS

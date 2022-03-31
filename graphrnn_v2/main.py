@@ -4,6 +4,7 @@ Run the graphrnn_v2 model on community graphs.
 import time
 import itertools
 
+import networkx as nx
 from tqdm import tqdm
 
 import wandb
@@ -11,10 +12,13 @@ import wandb
 import torch
 from torch.nn.utils import rnn as rnnutils
 import torch.nn.functional as F
+
+import torch_geometric
 from torch_geometric.loader import DataLoader
 
 from graphrnn_v2.models import GraphRNN_S
-from graphrnn_v2.data import CommunityDataset, RNNTransform
+from graphrnn_v2.data import GridDataset, RNNTransform, EncodeGraphRNNFeature
+from graphrnn_v2.stats.stats import GraphStats
 
 
 if __name__ == "__main__":
@@ -22,8 +26,12 @@ if __name__ == "__main__":
     M = 80
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dataset = CommunityDataset(transform=RNNTransform(M=M))
-    dataloader = DataLoader(dataset, batch_size=32, num_workers=4, shuffle=True)
+    grid_dataset = GridDataset(transform=RNNTransform(M=M))
+    train_dataset, test_dataset = torch.utils.data.random_split(
+        grid_dataset, [int(0.8 * len(grid_dataset)), len(grid_dataset) - int(0.8 * len(grid_dataset))]
+    )
+    train_dataloader = DataLoader(train_dataset, batch_size=32, num_workers=4, shuffle=True)
+    test_graphs = [torch_geometric.utils.to_networkx(graph) for graph in test_dataset]
 
     model = GraphRNN_S(
         adjacency_size=M,
@@ -40,7 +48,7 @@ if __name__ == "__main__":
     model.train()
     model = model.to(device)
     for epoch in tqdm(range(3000)):
-        for batch_idx, batch in enumerate(itertools.islice(dataloader, 32)):
+        for batch_idx, batch in enumerate(itertools.islice(train_dataloader, 32)):
 
             batch = batch.to(device)
             start_time = time.time()
@@ -53,12 +61,7 @@ if __name__ == "__main__":
             x_padded = rnnutils.pad_sequence(torch.split(batch.x, lengths_tuple), batch_first=True)
             y_padded = rnnutils.pad_sequence(torch.split(batch.y, lengths_tuple), batch_first=True)
 
-            # Sort batch by graph length, needed for the graph-level RNN.
-            sorted_lengths, sorted_idx = lengths.sort(0, descending=True)
-            x_padded = x_padded[sorted_idx]
-            y_padded = y_padded[sorted_idx]
-
-            output_sequences = model(x_padded, sorted_lengths)
+            output_sequences = model(x_padded, lengths)
 
             loss = F.binary_cross_entropy(output_sequences, y_padded)
             loss.backward()
@@ -66,14 +69,23 @@ if __name__ == "__main__":
 
             batch_time = time.time() - start_time
 
-            wandb.log(
-                dict(
-                    loss=loss.item(),
-                    batch=batch_idx,
-                    epoch=epoch,
-                    lr=scheduler.get_last_lr()[0],
-                    batch_time=batch_time,
-                )
+            logging_stats = dict(
+                loss=loss.item(),
+                batch=batch_idx,
+                epoch=epoch,
+                lr=scheduler.get_last_lr()[0],
+                batch_time=batch_time,
             )
+
+            if epoch % 100 == 0 and batch_idx == 0:
+                # sample some graphs and evaluate them
+                output_sequences, lengths = model.sample(1024, device)
+                adjs = EncodeGraphRNNFeature.get_adjacencies_from_sequences(output_sequences, lengths)
+                graphs = [nx.from_numpy_array(adj.numpy()) for adj in adjs]
+
+                degree_mmd = GraphStats.degree(test_graphs, graphs)
+                logging_stats["degree_mmd"] = degree_mmd
+
+            wandb.log(logging_stats)
 
         scheduler.step()

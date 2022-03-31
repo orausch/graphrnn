@@ -53,7 +53,7 @@ class GraphRNN_S(nn.Module):
             nn.Sigmoid(),
         )
 
-    def forward(self, input_sequences, input_length, sampling=False):
+    def forward(self, input_sequences, input_length, sampling=False, enforce_sorted=False):
         """
         @param input_sequences: (batch_size, max_num_nodes, adjacency_size=M)
             For each graph in the batch, the sequence of adjacency vectors (including the first SOS).
@@ -63,7 +63,9 @@ class GraphRNN_S(nn.Module):
         input_sequences = self.embedding(input_sequences)
 
         # Pack sequences for RNN efficiency.
-        input_sequences = pack_padded_sequence(input_sequences, input_length, batch_first=True)
+        input_sequences = pack_padded_sequence(
+            input_sequences, input_length, batch_first=True, enforce_sorted=enforce_sorted
+        )
         if sampling:
             output_sequences, self.hidden = self.rnn(input_sequences, self.hidden)
         else:
@@ -102,12 +104,14 @@ class GraphRNN_S(nn.Module):
             self.hidden = torch.zeros(self.num_layers, batch_size, self.hidden_size, device=device)
             while input_length.any():
                 node_id += 1
+                if node_id == MAX_NUM_NODE:
+                    break
                 output_sequence_probs = self.forward(input_sequence, torch.ones(batch_size), sampling=True)
                 mask = torch.rand_like(output_sequence_probs)
                 output_sequence = torch.gt(output_sequence_probs, mask)
 
                 # Identify the EOS sequences and persist them even if model says otherwise.
-                input_length *= output_sequence.any(dim=-1).squeeze()
+                input_length *= output_sequence.any(dim=-1).squeeze().cpu()
                 seq_lengths += input_length
 
                 sequences[:, node_id - 1] = input_length.unsqueeze(1).to(device) * output_sequence[:, 0]

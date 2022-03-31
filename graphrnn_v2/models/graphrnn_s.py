@@ -96,7 +96,7 @@ class GraphRNN_S(nn.Module):
 
         sequences = torch.zeros(batch_size, max_num_nodes, self.adjacency_size)
         seq_lengths = torch.zeros(batch_size, dtype=torch.long)
-        node_id = 0            # Id of the node to be added to the sequence. Node 0 is not added.
+        node_id = 0  # Id of the node to be added to the sequence. Node 0 is not added.
         with torch.no_grad():
             self.hidden = torch.zeros(self.num_layers, batch_size, self.hidden_size, device=device)
             while input_length.any():

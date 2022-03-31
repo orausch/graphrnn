@@ -37,7 +37,7 @@ class TriangleDebugDataset(data.InMemoryDataset):
     def generate_graphs():
         g = nx.Graph()
         g.add_edges_from([(0, 1), (0, 2), (1, 2)])
-        return [g]
+        return [g] * 64
 
     def __init__(self, transform):
         super().__init__(".", transform)
@@ -66,7 +66,7 @@ class MixedDebugDataset(data.InMemoryDataset):
         g2 = nx.Graph()
         g2.add_edges_from([(0, 1), (0, 2)])
 
-        graphs = [g1 for _ in range(16)] + [g2 for _ in range(16)]
+        graphs = [g1 for _ in range(32)] + [g2 for _ in range(32)]
         return graphs
 
     def __init__(self, transform):

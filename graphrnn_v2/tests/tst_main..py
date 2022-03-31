@@ -1,38 +1,54 @@
 """
 Run the graphrnn_v2 model on community graphs.
 """
-import time
 import itertools
+import time
 
 import networkx as nx
+import torch
+import torch.nn.functional as F
+import torch_geometric
+import wandb
+from matplotlib import pyplot as plt
+from torch.nn.utils import rnn as rnnutils
+from torch_geometric.loader import DataLoader
 from tqdm import tqdm
 
-import wandb
-
-import torch
-from torch.nn.utils import rnn as rnnutils
-import torch.nn.functional as F
-
-import torch_geometric
-from torch_geometric.loader import DataLoader
-
+from graphrnn_v2.data import (
+    TriangleDebugDataset,
+    MixedDebugDataset,
+    SmallGridDataset,
+    RNNTransform,
+    EncodeGraphRNNFeature,
+)
 from graphrnn_v2.models import GraphRNN_S
-from graphrnn_v2.data import GridDataset, RNNTransform, EncodeGraphRNNFeature
 from graphrnn_v2.stats.stats import GraphStats
 
 
+def plot(graphs, title):
+    plt.figure(figsize=(10, 10))
+    plt.title(title)
+    for i, graph in enumerate(graphs):
+        plt.subplot(2, 2, i + 1)
+        nx.draw_spectral(graph, node_size=100)
+    plt.show()
+
+
 if __name__ == "__main__":
-    wandb.init(project="graphrnn-reproduction", entity="graphnn-reproduction", job_type="v2_community")
-    M = 80
+    wandb.init(project="graphrnn-reproduction", entity="graphnn-reproduction", job_type="v2-test")
+    # FIXME: Edit params as you wish.
+    M = 3  # 20, 3, 5
+    Dataset = TriangleDebugDataset  # SmallGridDataset  # TriangleDebugDataset  # MixedDebugDataset
+    sampler_max_num_nodes = 10  # 20, 5, 5
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    grid_dataset = GridDataset(transform=RNNTransform(M=M))
+    grid_dataset = Dataset(transform=RNNTransform(M=M))
     train_dataset, test_dataset = torch.utils.data.random_split(
         grid_dataset, [int(0.8 * len(grid_dataset)), len(grid_dataset) - int(0.8 * len(grid_dataset))]
     )
-    train_dataloader = DataLoader(train_dataset, batch_size=32, num_workers=4, shuffle=True)
+    train_dataloader = DataLoader(train_dataset, batch_size=32, num_workers=0, shuffle=True)
     test_graphs = [torch_geometric.utils.to_networkx(graph, to_undirected=True) for graph in test_dataset]
-    sampler_max_num_nodes = 1000
+    plot(test_graphs[:4], "Test graphs")
 
     model = GraphRNN_S(
         adjacency_size=M,
@@ -80,9 +96,10 @@ if __name__ == "__main__":
 
             if epoch % 100 == 0 and batch_idx == 0:
                 # sample some graphs and evaluate them
-                output_sequences, lengths = model.sample(1024, device, sampler_max_num_nodes)
+                output_sequences, lengths = model.sample(256, device, sampler_max_num_nodes)
                 adjs = EncodeGraphRNNFeature.get_adjacencies_from_sequences(output_sequences, lengths)
                 graphs = [nx.from_numpy_array(adj.numpy()) for adj in adjs]
+                plot(graphs[:4], "Sampled graphs")
 
                 degree_mmd = GraphStats.degree(test_graphs, graphs)
                 logging_stats["degree_mmd"] = degree_mmd

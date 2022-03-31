@@ -76,7 +76,7 @@ class GraphRNN_S(nn.Module):
         output_sequences = self.adjacency_mlp(output_sequences)
         return output_sequences
 
-    def sample(self, batch_size, device):
+    def sample(self, batch_size, device, max_num_nodes):
         """
         Sample a batch of graph sequences.
         @return: Tensor of size (batch_size, max_num_node, self.adjacency_size) in the same device as the model.
@@ -94,18 +94,16 @@ class GraphRNN_S(nn.Module):
         input_sequence = torch.ones(batch_size, 1, self.adjacency_size, device=device)  # SOS.
         input_length = torch.ones(batch_size, dtype=torch.long)
 
-        # FIXME ME: Using some huge number until we find a better way.
-        # Can use a toch.cat in an iterative way but that would a priori  be slower.
-        MAX_NUM_NODE = 1000
-        sequences = torch.zeros(batch_size, MAX_NUM_NODE, self.adjacency_size)
+        sequences = torch.zeros(batch_size, max_num_nodes, self.adjacency_size)
         seq_lengths = torch.zeros(batch_size, dtype=torch.long)
-        node_id = 0
+        node_id = 0            # Id of the node to be added to the sequence. Node 0 is not added.
         with torch.no_grad():
             self.hidden = torch.zeros(self.num_layers, batch_size, self.hidden_size, device=device)
             while input_length.any():
                 node_id += 1
-                if node_id == MAX_NUM_NODE:
+                if node_id == max_num_nodes:
                     break
+
                 output_sequence_probs = self.forward(input_sequence, torch.ones(batch_size), sampling=True)
                 mask = torch.rand_like(output_sequence_probs)
                 output_sequence = torch.gt(output_sequence_probs, mask)

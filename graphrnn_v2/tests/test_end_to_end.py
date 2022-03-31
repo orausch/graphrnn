@@ -19,13 +19,15 @@ from graphrnn_v2.data import RNNTransform, EncodeGraphRNNFeature
 from graphrnn_v2.data import MixedDebugDataset, TriangleDebugDataset
 from graphrnn_v2.models import GraphRNN_S
 
+# FIXME: Change the type of debug dataset and max_num_nodes.
+Dataset = MixedDebugDataset
+MAX_NUM_NODES = 10       # Does not handle empty graphs.
 
 def test_end_to_end():
     M = 3
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # FIXME: Use the MixedDebugDataset for a harder test.
-    dataset = TriangleDebugDataset(transform=RNNTransform(M=M))
+    dataset = Dataset(transform=RNNTransform(M=M))
     dataloader = DataLoader(dataset, batch_size=32, num_workers=0, shuffle=True)
 
     model = GraphRNN_S(
@@ -42,7 +44,7 @@ def test_end_to_end():
 
     model.train()
     model = model.to(device)
-    for epoch in tqdm(range(3000)):
+    for epoch in tqdm(range(1000)):
         for batch_idx, batch in enumerate(itertools.islice(dataloader, 32)):
             batch = batch.to(device)
             optimizer.zero_grad()
@@ -68,11 +70,11 @@ def test_end_to_end():
 
     print(f"{loss=}")
 
-    output_sequences, lengths = model.sample(32, device)
+    output_sequences, lengths = model.sample(32, device, max_num_nodes=MAX_NUM_NODES)
     adjs = EncodeGraphRNNFeature.get_adjacencies_from_sequences(output_sequences, lengths)
     graphs = [nx.from_numpy_array(adj.numpy()) for adj in adjs]
 
-    test_graphs = TriangleDebugDataset.generate_graphs()
+    test_graphs = Dataset.generate_graphs()
     degree_mmd = GraphStats.degree(test_graphs, graphs)
     print(f"{degree_mmd=}")
 

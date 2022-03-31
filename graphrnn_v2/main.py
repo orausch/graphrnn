@@ -30,8 +30,9 @@ if __name__ == "__main__":
     train_dataset, test_dataset = torch.utils.data.random_split(
         grid_dataset, [int(0.8 * len(grid_dataset)), len(grid_dataset) - int(0.8 * len(grid_dataset))]
     )
-    train_dataloader = DataLoader(train_dataset, batch_size=32, num_workers=4, shuffle=True)
+    train_dataloader = DataLoader(train_dataset, batch_size=32, num_workers=0, shuffle=True)
     test_graphs = [torch_geometric.utils.to_networkx(graph) for graph in test_dataset]
+    sampler_max_num_nodes = 1000
 
     model = GraphRNN_S(
         adjacency_size=M,
@@ -47,7 +48,7 @@ if __name__ == "__main__":
 
     model.train()
     model = model.to(device)
-    for epoch in tqdm(range(3000)):
+    for epoch in tqdm(range(100)):
         for batch_idx, batch in enumerate(itertools.islice(train_dataloader, 32)):
 
             batch = batch.to(device)
@@ -79,7 +80,7 @@ if __name__ == "__main__":
 
             if epoch % 100 == 0 and batch_idx == 0:
                 # sample some graphs and evaluate them
-                output_sequences, lengths = model.sample(1024, device)
+                output_sequences, lengths = model.sample(1024, device, sampler_max_num_nodes)
                 adjs = EncodeGraphRNNFeature.get_adjacencies_from_sequences(output_sequences, lengths)
                 graphs = [nx.from_numpy_array(adj.numpy()) for adj in adjs]
 

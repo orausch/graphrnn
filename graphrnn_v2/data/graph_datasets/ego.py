@@ -18,8 +18,10 @@ class EgoDataset(data.InMemoryDataset):
 
     @staticmethod
     def load_network():
-        G = pickle.load(open(pathlib.Path(__file__).parent.parent.resolve() / "raw_datasets/ind.citeseer.graph", "rb"),
-                        encoding="latin1")
+        G = pickle.load(
+            open(pathlib.Path(__file__).parent.parent.resolve() / "raw_datasets/ind.citeseer.graph", "rb"),
+            encoding="latin1",
+        )
         G = nx.from_dict_of_lists(G)
         G = nx.subgraph(G, max(nx.connected_components(G), key=len))
         G = nx.convert_node_labels_to_integers(G)

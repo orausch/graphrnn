@@ -72,12 +72,6 @@ class EncodeGraphRNNFeature(T.BaseTransform):
         # Add SOS (row of ones) and EOS (row of zeros).
         sequences = torch.cat([torch.ones(1, self.M), sequences, torch.zeros(1, self.M)], dim=0)
 
-        # The first M rows can only be connected to at most M-1 nodes sequences
-        # So their sequence vector is not full length
-        # Record the relevant adjacency size to include it in the loss function.
-        data.relevant_adj_size = torch.ones(N, dtype=torch.long) * self.M
-        data.relevant_adj_size[1 : self.M] = torch.arange(1, self.M, dtype=torch.long)[: min(self.M - 1, N - 1)]
-
         # FIXME: Wouldn't data.length <- data.num_nodes be more explicit here? We can even omit the line as use num_nodes.
         data.length = sequences[:-1].shape[0]
 

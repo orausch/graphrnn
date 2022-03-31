@@ -92,14 +92,14 @@ class GraphRNN_S(nn.Module):
         rather than an SOS token which can be confused with a disconnected node.
         """
         input_sequence = torch.ones(batch_size, 1, self.adjacency_size, device=device)  # SOS.
-        input_length = torch.ones(batch_size, dtype=torch.long)
+        is_not_eos = torch.ones(batch_size, dtype=torch.long)
 
         sequences = torch.zeros(batch_size, max_num_nodes, self.adjacency_size)
         seq_lengths = torch.zeros(batch_size, dtype=torch.long)
         node_id = 0  # Id of the node to be added to the sequence. Node 0 is not added.
         with torch.no_grad():
             self.hidden = torch.zeros(self.num_layers, batch_size, self.hidden_size, device=device)
-            while input_length.any():
+            while is_not_eos.any():
                 node_id += 1
                 if node_id == max_num_nodes:
                     break
@@ -109,10 +109,13 @@ class GraphRNN_S(nn.Module):
                 output_sequence = torch.gt(output_sequence_probs, mask)
 
                 # Identify the EOS sequences and persist them even if model says otherwise.
-                input_length *= output_sequence.any(dim=-1).squeeze().cpu()
-                seq_lengths += input_length
+                is_not_eos *= output_sequence.any(dim=-1).squeeze().cpu()
+                seq_lengths += is_not_eos
 
-                sequences[:, node_id - 1] = input_length.unsqueeze(1).to(device) * output_sequence[:, 0]
+                sequences[:, node_id - 1] = output_sequence[:, 0]
                 input_sequence = output_sequence.float()
 
-        return sequences[:, : seq_lengths.max()], seq_lengths
+        # Clean irrelevant bits. FIXME: maybe irrelevant depending on the implementation of the inverse (seq -> graph).
+        sequences = pack_padded_sequence(sequences, seq_lengths + 1, batch_first=True, enforce_sorted=False)
+        sequences = pad_packed_sequence(sequences, batch_first=True)[0]
+        return sequences[:, : seq_lengths.max()].tril(), seq_lengths

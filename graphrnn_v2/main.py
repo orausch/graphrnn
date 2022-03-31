@@ -30,7 +30,7 @@ if __name__ == "__main__":
     train_dataset, test_dataset = torch.utils.data.random_split(
         grid_dataset, [int(0.8 * len(grid_dataset)), len(grid_dataset) - int(0.8 * len(grid_dataset))]
     )
-    train_dataloader = DataLoader(train_dataset, batch_size=32, num_workers=0, shuffle=True)
+    train_dataloader = DataLoader(train_dataset, batch_size=32, num_workers=4, shuffle=True)
     test_graphs = [torch_geometric.utils.to_networkx(graph) for graph in test_dataset]
     sampler_max_num_nodes = 1000
 
@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
     model.train()
     model = model.to(device)
-    for epoch in tqdm(range(100)):
+    for epoch in tqdm(range(3000)):
         for batch_idx, batch in enumerate(itertools.islice(train_dataloader, 32)):
 
             batch = batch.to(device)

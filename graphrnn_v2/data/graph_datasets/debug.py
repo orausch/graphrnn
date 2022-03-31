@@ -32,6 +32,7 @@ class TriangleDebugDataset(data.InMemoryDataset):
      | /
     (2)
     """
+
     @staticmethod
     def generate_graphs():
         g = nx.Graph()
@@ -56,6 +57,7 @@ class MixedDebugDataset(data.InMemoryDataset):
        (4)
 
     """
+
     @staticmethod
     def generate_graphs():
         g1 = nx.Graph()

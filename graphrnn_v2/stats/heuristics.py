@@ -42,16 +42,8 @@ class MMD:
             emd = MMD.emd(x, y)
             return np.exp(-emd * emd / 2.0)
 
-        d_xx = (
-            sum([pairwise_gaussian_emd(x_i, x_j) for x_i in x for x_j in x])
-            / len(x) ** 2
-        )
-        d_yy = (
-            sum([pairwise_gaussian_emd(y_i, y_j) for y_i in y for y_j in y])
-            / len(y) ** 2
-        )
-        d_xy = sum([pairwise_gaussian_emd(x_i, y_i) for x_i in x for y_i in y]) / (
-            len(x) * len(y)
-        )
+        d_xx = sum([pairwise_gaussian_emd(x_i, x_j) for x_i in x for x_j in x]) / len(x) ** 2
+        d_yy = sum([pairwise_gaussian_emd(y_i, y_j) for y_i in y for y_j in y]) / len(y) ** 2
+        d_xy = sum([pairwise_gaussian_emd(x_i, y_i) for x_i in x for y_i in y]) / (len(x) * len(y))
 
         return d_xx + d_yy - 2.0 * d_xy

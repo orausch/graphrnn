@@ -18,9 +18,7 @@ if __name__ == "__main__":
 
     # Parse arguments.
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "predictions", help="predictions file containing serialized list of graphs"
-    )
+    parser.add_argument("predictions", help="predictions file containing serialized list of graphs")
     parser.add_argument("truth", help="truth file containing serialized list of graphs")
     args = parser.parse_args()
 

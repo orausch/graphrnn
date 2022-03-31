@@ -66,7 +66,7 @@ def test_end_to_end():
             optimizer.step()
         scheduler.step()
 
-    print(f'{loss=}')
+    print(f"{loss=}")
 
     output_sequences, lengths = model.sample(32, device)
     adjs = EncodeGraphRNNFeature.get_adjacencies_from_sequences(output_sequences, lengths)
@@ -74,7 +74,7 @@ def test_end_to_end():
 
     test_graphs = TriangleDebugDataset.generate_graphs()
     degree_mmd = GraphStats.degree(test_graphs, graphs)
-    print(f'{degree_mmd=}')
+    print(f"{degree_mmd=}")
 
     for graph in graphs:
         nx.draw(graph, with_labels=True)

@@ -60,7 +60,7 @@ class EncodeGraphRNNFeature(T.BaseTransform):
         FIXME: Can we vectorize the inverse method to get rid of the for loop?
         """
         return [
-            EncodeGraphRNNFeature.inverse(graph_sequence[: seq_length])
+            EncodeGraphRNNFeature.inverse(graph_sequence[:seq_length])
             for graph_sequence, seq_length in zip(graph_sequences, lengths)
         ]
 

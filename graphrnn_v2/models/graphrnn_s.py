@@ -53,7 +53,12 @@ class GraphRNN_S(nn.Module):
             nn.Sigmoid(),
         )
 
-    def forward(self, input_sequences, input_length, sampling=False, enforce_sorted=False):
+    def mask_out_bits_after_length(self, sequences, lengths):
+        sequences = pack_padded_sequence(sequences, lengths, batch_first=True, enforce_sorted=False)
+        sequences = pad_packed_sequence(sequences, batch_first=True)[0]
+        return sequences
+
+    def forward(self, input_sequences, input_length, sampling=False):
         """
         @param input_sequences: (batch_size, max_num_nodes, adjacency_size=M)
             For each graph in the batch, the sequence of adjacency vectors (including the first SOS).
@@ -63,9 +68,7 @@ class GraphRNN_S(nn.Module):
         input_sequences = self.embedding(input_sequences)
 
         # Pack sequences for RNN efficiency.
-        input_sequences = pack_padded_sequence(
-            input_sequences, input_length, batch_first=True, enforce_sorted=enforce_sorted
-        )
+        input_sequences = pack_padded_sequence(input_sequences, input_length, batch_first=True, enforce_sorted=False)
         if sampling:
             output_sequences, self.hidden = self.rnn(input_sequences, self.hidden)
         else:
@@ -73,8 +76,10 @@ class GraphRNN_S(nn.Module):
         # Unpack RNN output.
         output_sequences, output_length = pad_packed_sequence(output_sequences, batch_first=True)
 
+        # MLP to get adjacency vectors.
         output_sequences = self.adjacency_mlp(output_sequences)
-        return output_sequences
+
+        return self.mask_out_bits_after_length(output_sequences, input_length)
 
     def sample(self, batch_size, device, max_num_nodes):
         """
@@ -115,7 +120,9 @@ class GraphRNN_S(nn.Module):
                 sequences[:, node_id - 1] = output_sequence[:, 0]
                 input_sequence = output_sequence.float()
 
-        # Clean irrelevant bits. FIXME: maybe irrelevant depending on the implementation of the inverse (seq -> graph).
-        sequences = pack_padded_sequence(sequences, seq_lengths + 1, batch_first=True, enforce_sorted=False)
-        sequences = pad_packed_sequence(sequences, batch_first=True)[0]
-        return sequences[:, : seq_lengths.max()].tril(), seq_lengths
+        # Clean irrelevant bits and enforce creation of connected graph.
+        # Pack to seq_lengths to include empty sequences. Pack does not support empty sequences.
+        self.mask_out_bits_after_length(sequences, seq_lengths + 1)
+        sequences = sequences.tril()
+
+        return sequences[:, : seq_lengths.max()], seq_lengths

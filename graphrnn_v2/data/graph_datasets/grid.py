@@ -27,4 +27,4 @@ class SmallGridDataset(GridDataset):
     """
 
     min_side = 2
-    max_side = 10
+    max_side = 5

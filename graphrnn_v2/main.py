@@ -51,7 +51,7 @@ if __name__ == "__main__":
     model.train()
     model = model.to(device)
     for epoch in tqdm(range(3000)):
-        for batch_idx, batch in enumerate(train_dataloader, 32):
+        for batch_idx, batch in enumerate(train_dataloader):
 
             batch = batch.to(device)
             start_time = time.time()

@@ -38,7 +38,7 @@ def plot(graphs, title):
 if __name__ == "__main__":
     wandb.init(project="graphrnn-reproduction", entity="graphnn-reproduction", job_type="v2-test", mode="online")
     # FIXME: Edit params as you wish.
-    M = 15  # 20, 3, 5
+    M = 20  # 20, 3, 5
     Dataset = SmallEgoDataset  # SmallGridDataset  # TriangleDebugDataset  # MixedDebugDataset
     sampler_max_num_nodes = 20  # 20, 5, 5
 
@@ -47,7 +47,9 @@ if __name__ == "__main__":
     train_dataset, test_dataset = torch.utils.data.random_split(
         grid_dataset, [int(0.8 * len(grid_dataset)), len(grid_dataset) - int(0.8 * len(grid_dataset))]
     )
-    train_dataloader = DataLoader(train_dataset, batch_size=32, num_workers=0, shuffle=True)
+    # use a random sampler to match the paper
+    sampler = torch.utils.data.RandomSampler(train_dataset, num_samples=32 * 32, replacement=True)
+    train_dataloader = DataLoader(train_dataset, batch_size=32, num_workers=0, sampler=sampler)
     test_graphs = [torch_geometric.utils.to_networkx(graph, to_undirected=True) for graph in test_dataset]
     plot(test_graphs[:4], "Test graphs")
 
@@ -66,7 +68,7 @@ if __name__ == "__main__":
     model.train()
     model = model.to(device)
     for epoch in tqdm(range(3000)):
-        for batch_idx, batch in enumerate(itertools.islice(train_dataloader, 32)):
+        for batch_idx, batch in enumerate(train_dataloader):
 
             batch = batch.to(device)
             start_time = time.time()
@@ -86,12 +88,14 @@ if __name__ == "__main__":
             optimizer.step()
 
             batch_time = time.time() - start_time
+
             logging_stats = dict(
                 loss=loss.item(),
                 batch=batch_idx,
                 epoch=epoch,
                 lr=scheduler.get_last_lr()[0],
                 batch_time=batch_time,
+                batch_size=batch.num_graphs,
             )
 
             if epoch % 100 == 0:
@@ -107,6 +111,7 @@ if __name__ == "__main__":
 
                 if batch_idx == 0:
                     # sample some graphs and evaluate them
+                    sample_start_time = time.time()
                     output_sequences, lengths = model.sample(64, device, sampler_max_num_nodes)
                     adjs = EncodeGraphRNNFeature.get_adjacencies_from_sequences(output_sequences, lengths)
                     graphs = [nx.from_numpy_array(adj.numpy()) for adj in adjs]
@@ -114,6 +119,7 @@ if __name__ == "__main__":
 
                     degree_mmd = GraphStats.degree(test_graphs, graphs)
                     logging_stats["degree_mmd"] = degree_mmd
+                    logging_stats["sample_time"] = time.time() - sample_start_time
 
                 if batch_idx == len(train_dataloader) - 1:
                     logging_stats["epoch_nll"] = epoch_nll / len(train_dataloader)

@@ -42,9 +42,12 @@ class GraphStats:
         return hist
 
     @staticmethod
-    def laplacian(test: list[nx.Graph], pred: list[nx.Graph]) -> float:
-        pass
+    @stat(MMD.mmd)
+    def laplacian(G: nx.Graph) -> np.ndarray:
+        eigenvals = nx.laplacian_spectrum(G)
+        hist, _ = np.histogram(eigenvals, bins=100, range=(0.0, 2.0), density=False)
+        return hist
 
     @staticmethod
-    def wl(test: list[nx.Graph], pred: list[nx.Graph]) -> float:
+    def wl(G: nx.Graph) -> np.ndarray:
         pass

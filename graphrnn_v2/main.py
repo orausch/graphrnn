@@ -45,6 +45,16 @@ if __name__ == "__main__":
         output_embedding_size=64,
     )
 
+    # model = GraphRNN(
+    #     adjacency_size=M,
+    #     embedding_size_graph=64,
+    #     hidden_size_graph=128,
+    #     num_layers_graph=4,
+    #     embedding_size_edge=8,
+    #     hidden_size_edge=16,
+    #     num_layers_edge=4,
+    # )
+
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[400, 1000], gamma=0.3)
 
@@ -65,6 +75,9 @@ if __name__ == "__main__":
             y_padded = rnnutils.pad_sequence(torch.split(batch.y, lengths_tuple), batch_first=True)
 
             output_sequences = model(x_padded, lengths)
+
+            # grouped_edge_seqs = model.get_grouped_edge_sequences_from_y(y_padded, lengths)
+            # output_sequences = model(x_padded, lengths, grouped_edge_seqs)
 
             loss = F.binary_cross_entropy(output_sequences, y_padded)
             loss.backward()

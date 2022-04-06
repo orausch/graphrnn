@@ -39,7 +39,7 @@ class GraphRNN_S(nn.Module):
             self.embedding = nn.Identity()
             input_to_rnn_size = adjacency_size
 
-        self.rnn = nn.RNN(
+        self.rnn = nn.GRU(
             input_size=input_to_rnn_size,
             hidden_size=hidden_size,
             num_layers=num_layers,

@@ -122,7 +122,7 @@ class GraphRNN_S(nn.Module):
 
         # Clean irrelevant bits and enforce creation of connected graph.
         # Pack to seq_lengths to include empty sequences. Pack does not support empty sequences.
-        self.mask_out_bits_after_length(sequences, seq_lengths + 1)
+        sequences = self.mask_out_bits_after_length(sequences, seq_lengths + 1)
         sequences = sequences.tril()
 
         return sequences[:, : seq_lengths.max()], seq_lengths

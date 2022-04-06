@@ -1,45 +1,45 @@
 import networkx as nx
 import numpy as np
+
 from graphrnn_v2.stats.heuristics import MMD
+from typing import Callable
+
+
+def stat(heuristic: Callable[[np.ndarray, np.ndarray], float]):
+    def wrapper(func: Callable[[nx.Graph], np.ndarray]):
+        def wrapped(test: list[nx.Graph], pred: list[nx.Graph]):
+            # Filter out empty graphs.
+            test = [G for G in test if not G.number_of_nodes() == 0]
+            pred = [G for G in pred if not G.number_of_nodes() == 0]
+
+            # Compute descriptor
+            test_desc = [func(G) for G in test]
+            pred_desc = [func(G) for G in pred]
+
+            # Compute heuristic
+            stat = heuristic(test_desc, pred_desc)
+
+            return stat
+
+        return wrapped
+
+    return wrapper
 
 
 class GraphStats:
     @staticmethod
-    def degree(test: list[nx.Graph], pred: list[nx.Graph]) -> float:
-        # Filter out empty graphs.
-        test = [G for G in test if not G.number_of_nodes() == 0]
-        pred = [G for G in pred if not G.number_of_nodes() == 0]
-
-        # Compute degree histograms.
-        test_degs = [np.array(nx.degree_histogram(G)) for G in test]
-        pred_degs = [np.array(nx.degree_histogram(G)) for G in pred]
-
-        # Compute heuristic
-        stat = MMD.mmd(test_degs, pred_degs)
-
-        return stat
+    @stat(MMD.mmd)
+    def degree(G: nx.Graph) -> np.ndarray:
+        return np.array(nx.degree_histogram(G))
 
     @staticmethod
-    def clustering(test: list[nx.Graph], pred: list[nx.Graph]) -> float:
-        # Filter out empty graphs.
-        test = [G for G in test if not G.number_of_nodes() == 0]
-        pred = [G for G in pred if not G.number_of_nodes() == 0]
-
-        # Compute clustering coefficient histograms.
-        def _clustering(G: nx.Graph) -> np.array:
-            clustering_coeffs_list = list(nx.clustering(G).values())
-            hist, _ = np.histogram(
-                clustering_coeffs_list, bins=100, range=(0.0, 1.0), density=False
-            )
-            return hist
-
-        test_clustering = [_clustering(G) for G in test]
-        pred_clustering = [_clustering(G) for G in pred]
-
-        # Compute heuristic
-        stat = MMD.mmd(test_clustering, pred_clustering)
-
-        return stat
+    @stat(MMD.mmd)
+    def clustering(G: nx.Graph) -> np.ndarray:
+        clustering_coeffs_list = list(nx.clustering(G).values())
+        hist, _ = np.histogram(
+            clustering_coeffs_list, bins=100, range=(0.0, 1.0), density=False
+        )
+        return hist
 
     @staticmethod
     def laplacian(test: list[nx.Graph], pred: list[nx.Graph]) -> float:

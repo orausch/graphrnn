@@ -1,4 +1,6 @@
 import numpy as np
+import networkx as nx
+from stats.stats import GraphStats
 
 from graphrnn_v2.stats.heuristics import MMD
 
@@ -28,3 +30,11 @@ def test_mmd():
     ]
 
     assert np.allclose(MMD.mmd(x, y), 0.13596405410529133)
+
+
+def test_clustering():
+
+    x = [nx.barbell_graph(2,3)]
+    y = [nx.barbell_graph(3,3)]
+
+    assert np.allclose(GraphStats.clustering(x, y), 1.999996207094688)

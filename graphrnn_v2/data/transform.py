@@ -79,6 +79,13 @@ class EncodeGraphRNNFeature(T.BaseTransform):
         data.y = sequences[1:]
         return data
 
+class RandomPermute(T.BaseTransform):
+
+    def __call__(self, data):
+        x = data.x
+        edge_index = data.edge_index
+        perm = torch.randperm(data.num_nodes)
+        return torch_geometric.data.Data(x=x, edge_index=perm[edge_index], num_nodes=data.num_nodes)
 
 class BFS(T.BaseTransform):
     """
@@ -103,4 +110,4 @@ class BFS(T.BaseTransform):
 
 class RNNTransform(T.Compose):
     def __init__(self, M):
-        super(RNNTransform, self).__init__([BFS(), EncodeGraphRNNFeature(M=M)])
+        super(RNNTransform, self).__init__([BFS(), RandomPermute(), EncodeGraphRNNFeature(M=M)])

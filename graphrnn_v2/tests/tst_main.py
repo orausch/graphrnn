@@ -1,7 +1,6 @@
 """
 Run the graphrnn_v2 model on community graphs.
 """
-import itertools
 import time
 
 import networkx as nx
@@ -36,17 +35,15 @@ def plot(graphs, title):
 
 
 if __name__ == "__main__":
-    wandb.init(project="graphrnn-reproduction", entity="graphnn-reproduction", job_type="v2-test", mode="online")
+    wandb.init(project="graphrnn-reproduction", entity="graphnn-reproduction", job_type="v2-test", mode="disabled")
     # FIXME: Edit params as you wish.
-    M = 20  # 20, 3, 5
-    Dataset = SmallEgoDataset  # SmallGridDataset  # TriangleDebugDataset  # MixedDebugDataset
-    sampler_max_num_nodes = 20  # 20, 5, 5
+    M = 3  # 20, 3, 5
+    Dataset = MixedDebugDataset  # SmallGridDataset  # TriangleDebugDataset  # MixedDebugDataset
+    sampler_max_num_nodes = 5  # 20, 5, 5
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    grid_dataset = Dataset(transform=RNNTransform(M=M))
-    train_dataset, test_dataset = torch.utils.data.random_split(
-        grid_dataset, [int(0.8 * len(grid_dataset)), len(grid_dataset) - int(0.8 * len(grid_dataset))]
-    )
+    dataset = Dataset(transform=RNNTransform(M=M))
+    train_dataset, test_dataset = dataset, dataset
     # use a random sampler to match the paper
     sampler = torch.utils.data.RandomSampler(train_dataset, num_samples=32 * 32, replacement=True)
     train_dataloader = DataLoader(train_dataset, batch_size=32, num_workers=0, sampler=sampler)
@@ -56,8 +53,8 @@ if __name__ == "__main__":
     model = GraphRNN_S(
         adjacency_size=M,
         embed_first=True,
-        adjacency_embedding_size=64,
-        hidden_size=128,
+        adjacency_embedding_size=32,
+        hidden_size=64,
         num_layers=4,
         output_embedding_size=64,
     )

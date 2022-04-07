@@ -20,6 +20,8 @@ from graphrnn_v2.data import (
     SmallGridDataset,
     RNNTransform,
     EncodeGraphRNNFeature,
+    DebugDataset,
+    LineDebugDataset,
 )
 from graphrnn_v2.models import GraphRNN
 from graphrnn_v2.stats.stats import GraphStats
@@ -41,13 +43,11 @@ if __name__ == "__main__":
     # FIXME: Edit params as you wish.
     M = 20  # 20, 3, 5
     Dataset = SmallGridDataset  # SmallGridDataset  # TriangleDebugDataset  # MixedDebugDataset
-    sampler_max_num_nodes = 20  # 20, 5, 5
+    sampler_max_num_nodes = 30  # 20, 5, 5
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    grid_dataset = Dataset(transform=RNNTransform(M=M))
-    train_dataset, test_dataset = torch.utils.data.random_split(
-        grid_dataset, [int(0.8 * len(grid_dataset)), len(grid_dataset) - int(0.8 * len(grid_dataset))]
-    )
+    dataset = Dataset(transform=RNNTransform(M=M))
+    train_dataset, test_dataset = dataset, dataset
     sampler = torch.utils.data.RandomSampler(train_dataset, num_samples=32 * 32, replacement=True)
     train_dataloader = DataLoader(train_dataset, batch_size=32, num_workers=0, sampler=sampler)
     test_graphs = [torch_geometric.utils.to_networkx(graph, to_undirected=True) for graph in test_dataset]
@@ -55,8 +55,8 @@ if __name__ == "__main__":
 
     model = GraphRNN(
         adjacency_size=M,
-        embedding_size_graph=64,
-        hidden_size_graph=128,
+        embedding_size_graph=32,
+        hidden_size_graph=64,
         num_layers_graph=4,
         embedding_size_edge=8,
         hidden_size_edge=16,

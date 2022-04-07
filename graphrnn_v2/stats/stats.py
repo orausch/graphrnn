@@ -7,6 +7,12 @@ from typing import Callable
 
 def stat(heuristic: Callable[[np.ndarray, np.ndarray], float]):
     def wrapper(func: Callable[[nx.Graph], np.ndarray]):
+        """
+        Wrap function with input sanitation and heuristic calculation.
+
+        :param func: function to wrap
+        """
+
         def wrapped(test: list[nx.Graph], pred: list[nx.Graph]):
             # Filter out empty graphs.
             test = [G for G in test if not G.number_of_nodes() == 0]
@@ -51,3 +57,21 @@ class GraphStats:
     @staticmethod
     def wl(G: nx.Graph) -> np.ndarray:
         pass
+
+    @staticmethod
+    @stat(MMD.mmd)
+    def betweenness_centrality(G: nx.Graph) -> np.ndarray:
+        betweenness_centrality_list = list(nx.betweenness_centrality(G).values())
+        hist, _ = np.histogram(
+            betweenness_centrality_list, bins=100, range=(0.0, 1.0), density=False
+        )
+        return hist
+
+    @staticmethod
+    @stat(MMD.mmd)
+    def eigenvector_centrality(G: nx.Graph) -> np.ndarray:
+        eigenvector_centrality_list = list(nx.eigenvector_centrality(G).values())
+        hist, _ = np.histogram(
+            eigenvector_centrality_list, bins=100, range=(0.0, 1.0), density=False
+        )
+        return hist

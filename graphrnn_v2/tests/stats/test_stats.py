@@ -34,7 +34,7 @@ def test_mmd():
 
 def test_clustering():
 
-    x = [nx.barbell_graph(2,3)]
-    y = [nx.barbell_graph(3,3)]
+    x = [nx.barbell_graph(2, 3)]
+    y = [nx.barbell_graph(3, 3)]
 
     assert np.allclose(GraphStats.clustering(x, y), 1.999996207094688)

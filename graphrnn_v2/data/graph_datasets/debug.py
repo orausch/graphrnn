@@ -33,15 +33,28 @@ class TriangleDebugDataset(data.InMemoryDataset):
     (2)
     """
 
-    @staticmethod
-    def generate_graphs():
+    def __init__(self, transform):
+        super().__init__(".", transform)
         g = nx.Graph()
         g.add_edges_from([(0, 1), (0, 2), (1, 2)])
-        return [g] * 64
+        graphs = [torch_geometric.utils.from_networkx(g)]
+        self.data, self.slices = self.collate(graphs)
+
+
+class LineDebugDataset(data.InMemoryDataset):
+    """
+    Creates a dataset containing only the following triangle debug graph. Permutations have no effect.
+
+    (0)---(1)
+     |
+    (2)
+    """
 
     def __init__(self, transform):
         super().__init__(".", transform)
-        graphs = [torch_geometric.utils.from_networkx(g) for g in TriangleDebugDataset.generate_graphs()]
+        g = nx.Graph()
+        g.add_edges_from([(0, 1), (0, 2)])
+        graphs = [torch_geometric.utils.from_networkx(g)]
         self.data, self.slices = self.collate(graphs)
 
 
@@ -58,18 +71,11 @@ class MixedDebugDataset(data.InMemoryDataset):
 
     """
 
-    @staticmethod
-    def generate_graphs():
-        g1 = nx.Graph()
-        g1.add_edges_from([(0, 1), (0, 2), (1, 3), (2, 3), (2, 4), (3, 4)])
-
-        g2 = nx.Graph()
-        g2.add_edges_from([(0, 1), (0, 2)])
-
-        graphs = [g1 for _ in range(32)] + [g2 for _ in range(32)]
-        return graphs
-
     def __init__(self, transform):
         super().__init__(".", transform)
-        graphs = [torch_geometric.utils.from_networkx(g) for g in MixedDebugDataset.generate_graphs()]
+        g1 = nx.Graph()
+        g1.add_edges_from([(0, 1), (0, 2), (1, 3), (2, 3), (2, 4), (3, 4)])
+        g2 = nx.Graph()
+        g2.add_edges_from([(0, 1), (0, 2)])
+        graphs = [torch_geometric.utils.from_networkx(g1), torch_geometric.utils.from_networkx(g2)]
         self.data, self.slices = self.collate(graphs)

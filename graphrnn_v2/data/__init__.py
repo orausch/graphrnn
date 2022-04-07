@@ -7,5 +7,6 @@ from .graph_datasets import (
     CommunityDataset,
     EgoDataset,
     SmallEgoDataset,
+    LineDebugDataset,
 )
 from .transform import RNNTransform, EncodeGraphRNNFeature, BFS

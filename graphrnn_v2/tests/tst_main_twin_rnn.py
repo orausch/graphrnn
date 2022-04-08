@@ -114,7 +114,7 @@ if __name__ == "__main__":
                 if batch_idx == 0:
                     # sample some graphs and evaluate them
                     sample_start_time = time.time()
-                    output_sequences, lengths = model.sample(4, device, sampler_max_num_nodes)
+                    output_sequences, lengths = model.sample(64, device, sampler_max_num_nodes)
                     adjs = EncodeGraphRNNFeature.get_adjacencies_from_sequences(output_sequences, lengths)
                     graphs = [nx.from_numpy_array(adj.numpy()) for adj in adjs]
                     plot(graphs[:4], "Sampled graphs")

@@ -60,7 +60,7 @@ class GraphRNN(nn.Module):
             nn.ReLU(),
             nn.Linear(embedding_size_graph, hidden_size_edge),
             # FIXME: RELU HERE? The original paper doesn't do so. What's the tradeoff?
-            nn.ReLU(),
+            # nn.ReLU(),
         )
 
         self.edge_embedding = nn.Sequential(

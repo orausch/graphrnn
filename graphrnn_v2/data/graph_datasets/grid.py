@@ -26,5 +26,5 @@ class SmallGridDataset(GridDataset):
     Creates a dataset of small grid graphs.
     """
 
-    min_side = 3
-    max_side = 6
+    min_side = 2
+    max_side = 5

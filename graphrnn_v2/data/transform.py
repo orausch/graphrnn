@@ -100,7 +100,7 @@ class BFS(T.BaseTransform):
         assert data.is_undirected(), "Transform only works for undirected graphs."
         G = torch_geometric.utils.to_networkx(data, to_undirected=data.is_undirected())
 
-        start_node = torch.randint(0, data.num_nodes, (1,)).item()
+        start_node = 0
 
         # Get the breadth-first search order.
         bfs_order = [start_node] + [n for _, n in nx.bfs_edges(G, start_node)]

@@ -1,8 +1,11 @@
 """
 Run the graphrnn_v2 model on community graphs.
 """
+import os
 import time
 import itertools
+import datetime
+import pickle
 
 import networkx as nx
 from tqdm import tqdm
@@ -22,6 +25,8 @@ from graphrnn_v2.stats.stats import GraphStats
 
 
 if __name__ == "__main__":
+    BASE_SAVE_PATH = os.path.join("/cluster/scratch/rauscho/", "grid_run_" + str(datetime.datetime.now()))
+    os.makedirs(BASE_SAVE_PATH)
     wandb.init(project="graphrnn-reproduction", entity="graphnn-reproduction", job_type="v2_community")
     M = 80
 
@@ -95,11 +100,16 @@ if __name__ == "__main__":
             )
 
             if epoch % 100 == 0 and batch_idx == 0:
+                model_save_path = os.path.join(BASE_SAVE_PATH, f"model_{epoch}.pt")
+                graph_save_path = os.path.join(BASE_SAVE_PATH, f"graphs_{epoch}.dat")
+                torch.save(model.state_dict(), model_save_path)
                 sample_start_time = time.time()
                 # sample some graphs and evaluate them
                 output_sequences, lengths = model.sample(1024, device, sampler_max_num_nodes)
                 adjs = EncodeGraphRNNFeature.get_adjacencies_from_sequences(output_sequences, lengths)
                 graphs = [nx.from_numpy_array(adj.numpy()) for adj in adjs]
+                with open(graph_save_path, "wb") as f:
+                    pickle.dump(graphs, f)
 
                 degree_mmd = GraphStats.degree(test_graphs, graphs)
                 logging_stats["degree_mmd"] = degree_mmd

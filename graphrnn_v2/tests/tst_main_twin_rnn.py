@@ -41,9 +41,9 @@ if __name__ == "__main__":
         project="graphrnn-reproduction", entity="graphnn-reproduction", job_type="v2-twin-rnn-test", mode="disabled"
     )
     # FIXME: Edit params as you wish.
-    M = 20  # 20, 3, 5
+    M = 15  # 20, 3, 5
     Dataset = SmallGridDataset  # SmallGridDataset  # TriangleDebugDataset  # MixedDebugDataset
-    sampler_max_num_nodes = 30  # 20, 5, 5
+    sampler_max_num_nodes = 20  # 20, 5, 5
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dataset = Dataset(transform=RNNTransform(M=M))

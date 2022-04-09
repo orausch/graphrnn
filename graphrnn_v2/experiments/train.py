@@ -30,7 +30,7 @@ def train_experiment(
     name,
     model,
     M,
-    Dataset,
+    dataset,
     sampler_max_num_nodes,
     train_test_split=True,
     mode="online",
@@ -52,7 +52,6 @@ def train_experiment(
         if save_path is None:
             save_path = pathlib.Path.cwd()
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        dataset = Dataset(transform=RNNTransform(M=M))
         if train_test_split:
             train_dataset, test_dataset = torch.utils.data.random_split(
                 dataset, [int(0.8 * len(dataset)), len(dataset) - int(0.8 * len(dataset))]

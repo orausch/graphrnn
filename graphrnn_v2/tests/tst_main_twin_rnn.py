@@ -39,7 +39,7 @@ def plot(graphs):
 
 if __name__ == "__main__":
     wandb.init(
-        project="graphrnn-reproduction", entity="graphnn-reproduction", job_type="v2-twin-rnn-test", mode="disabled"
+        project="graphrnn-reproduction", entity="graphnn-reproduction", job_type="v2-twin-rnn-test", mode="online"
     )
     # FIXME: Edit params as you wish.
     M = 15  # 20, 3, 5
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     dataset = Dataset(transform=RNNTransform(M=M))
     train_dataset, test_dataset = dataset, dataset
     sampler = torch.utils.data.RandomSampler(train_dataset, num_samples=32 * 32, replacement=True)
-    train_dataloader = DataLoader(train_dataset, batch_size=32, num_workers=0, sampler=sampler)
+    train_dataloader = DataLoader(train_dataset, batch_size=32, num_workers=2, sampler=sampler)
     test_graphs = [torch_geometric.utils.to_networkx(graph, to_undirected=True) for graph in test_dataset]
     plot(test_graphs[:4])
 

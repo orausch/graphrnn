@@ -8,5 +8,9 @@ from .graph_datasets import (
     EgoDataset,
     SmallEgoDataset,
     LineDebugDataset,
+    CycleDataset,
+    KRegularDataset,
+    LadderDataset,
+    TreeDataset,
 )
 from .transform import RNNTransform, EncodeGraphRNNFeature, BFS

@@ -104,6 +104,7 @@ def train_experiment(
                     lr=scheduler.get_last_lr()[0],
                     batch_time=batch_time,
                     batch_size=batch.num_graphs,
+                    M=M
                 )
 
                 if epoch % epoch_checkpoint == 0:

@@ -6,10 +6,10 @@ if __name__ == "__main__":
     Dataset = SmallGridDataset
     M = 15
     sampler_max_num_nodes = 20
-    for k in range(10):
+    for k in range(5):
         model = graphrnn_small(M)
         train_experiment(
-            f"seed_experiment_seed_{k}",
+            f"fixed_seed_experiment_seed_{k}",
             model,
             M,
             Dataset,
@@ -17,4 +17,5 @@ if __name__ == "__main__":
             train_test_split=False,
             num_workers=2,
             plot=True,
+            max_epochs=1000
         )

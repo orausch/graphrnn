@@ -27,12 +27,13 @@ from graphrnn_v2.models import GraphRNN
 from graphrnn_v2.stats.stats import GraphStats
 
 
-def plot(graphs, title):
+def plot(graphs):
     plt.figure(figsize=(10, 10))
-    plt.title(title)
     for i, graph in enumerate(graphs):
-        plt.subplot(2, 2, i + 1)
+        plt.subplot(4, 2, 2*i + 1)
         nx.draw_spectral(graph, node_size=100)
+        plt.subplot(4, 2, 2*i + 2)
+        nx.draw(graph, node_size=100)
     plt.show()
 
 
@@ -51,7 +52,7 @@ if __name__ == "__main__":
     sampler = torch.utils.data.RandomSampler(train_dataset, num_samples=32 * 32, replacement=True)
     train_dataloader = DataLoader(train_dataset, batch_size=32, num_workers=0, sampler=sampler)
     test_graphs = [torch_geometric.utils.to_networkx(graph, to_undirected=True) for graph in test_dataset]
-    plot(test_graphs[:4], "Test graphs")
+    plot(test_graphs[:4])
 
     model = GraphRNN(
         adjacency_size=M,
@@ -114,10 +115,13 @@ if __name__ == "__main__":
                 if batch_idx == 0:
                     # sample some graphs and evaluate them
                     sample_start_time = time.time()
-                    output_sequences, lengths = model.sample(64, device, sampler_max_num_nodes)
+                    for sample in range(64):
+                        seqs, lens = model.sample(1, device, sampler_max_num_nodes)
+                        output_sequences.append(seqs.squeeze(0))
+                        lengths.append(lens.squeeze(0))
                     adjs = EncodeGraphRNNFeature.get_adjacencies_from_sequences(output_sequences, lengths)
                     graphs = [nx.from_numpy_array(adj.numpy()) for adj in adjs]
-                    plot(graphs[:4], "Sampled graphs")
+                    plot(graphs[:4])
 
                     degree_mmd = GraphStats.degree(test_graphs, graphs)
                     logging_stats["degree_mmd"] = degree_mmd

@@ -19,8 +19,10 @@ from graphrnn_v2.stats.stats import GraphStats
 def plot_(graphs):
     plt.figure(figsize=(10, 10))
     for i, graph in enumerate(graphs):
-        plt.subplot(2, 2, i + 1)
+        plt.subplot(4, 2, 2*i + 1)
         nx.draw_spectral(graph, node_size=100)
+        plt.subplot(4, 2, 2*i + 2)
+        nx.draw(graph, node_size=100)
     plt.show()
 
 
@@ -116,7 +118,11 @@ def train_experiment(
 
                     if batch_idx == 0:
                         sample_start_time = time.time()
-                        output_sequences, lengths = model.sample(64, device, sampler_max_num_nodes)
+                        output_sequences, lengths = [], []
+                        for sample in range(64):
+                            seqs, lens = model.sample(1, device, sampler_max_num_nodes)
+                            output_sequences.append(seqs.squeeze(0))
+                            lengths.append(lens.squeeze(0))
                         adjs = EncodeGraphRNNFeature.get_adjacencies_from_sequences(output_sequences, lengths)
                         graphs = [nx.from_numpy_array(adj.numpy()) for adj in adjs]
                         if plot:

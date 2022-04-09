@@ -115,6 +115,7 @@ if __name__ == "__main__":
                 if batch_idx == 0:
                     # sample some graphs and evaluate them
                     sample_start_time = time.time()
+                    output_sequences, lengths = [], []
                     for sample in range(64):
                         seqs, lens = model.sample(1, device, sampler_max_num_nodes)
                         output_sequences.append(seqs.squeeze(0))

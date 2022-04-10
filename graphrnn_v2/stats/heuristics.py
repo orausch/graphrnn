@@ -38,7 +38,6 @@ class MMD:
 
             x = np.concatenate((x, np.zeros(max_ - len(x))))
             y = np.concatenate((y, np.zeros(max_ - len(y))))
-            # FIXME: What if the middle bins are not the same? (e.g. x = [1, 3, 4] and y = [1, 2, 3]).
             emd = MMD.emd(x, y)
             return np.exp(-emd * emd / 2.0)
 

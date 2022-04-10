@@ -39,7 +39,7 @@ def plot(graphs):
 
 if __name__ == "__main__":
     wandb.init(
-        project="graphrnn-reproduction", entity="graphnn-reproduction", job_type="v2-twin-rnn-test", mode="online"
+        project="graphrnn-reproduction", entity="graphnn-reproduction", job_type="v2-twin-rnn-test", mode="disabled"
     )
     # FIXME: Edit params as you wish.
     M = 15  # 20, 3, 5
@@ -116,7 +116,7 @@ if __name__ == "__main__":
                     # sample some graphs and evaluate them
                     sample_start_time = time.time()
                     output_sequences, lengths = [], []
-                    for sample in range(64):
+                    for sample in tqdm(range(64)):
                         seqs, lens = model.sample(1, device, sampler_max_num_nodes)
                         output_sequences.append(seqs.squeeze(0))
                         lengths.append(lens.squeeze(0))

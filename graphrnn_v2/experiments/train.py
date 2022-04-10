@@ -119,7 +119,7 @@ def train_experiment(
                     if batch_idx == 0:
                         sample_start_time = time.time()
                         output_sequences, lengths = [], []
-                        for sample in range(64):
+                        for sample in tqdm(range(64)):
                             seqs, lens = model.sample(1, device, sampler_max_num_nodes)
                             output_sequences.append(seqs.squeeze(0))
                             lengths.append(lens.squeeze(0))

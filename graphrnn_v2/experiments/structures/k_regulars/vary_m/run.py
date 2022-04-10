@@ -5,11 +5,12 @@ from graphrnn_v2.experiments.models import graphrnn_small, graphrnn_s_small
 
 if __name__ == "__main__":
     # GraphRNN_s, k = 3
-    M = 32
-    dataset = SmallKRegularDataset(transform=RNNTransform(M=M))
-    sampler_max_num_nodes = 40
+    sampler_max_num_nodes = 35
 
-    for M in [4, 32, 8, 16]:
+    for M in [32, 8, 16, 4]:
+        dataset = SmallKRegularDataset(transform=RNNTransform(M=M))
+
+
         model = graphrnn_s_small(M)
         train_experiment(
             f"3_regular_vary_m_{M}_graphrnn_s",

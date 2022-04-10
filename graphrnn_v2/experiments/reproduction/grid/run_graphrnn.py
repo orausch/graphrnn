@@ -10,13 +10,14 @@ if __name__ == "__main__":
     sampler_max_num_nodes = 400
     model = graphrnn(M)
     train_experiment(
-        f"full_grid_skander",
+        f"full_grid_graphrnn",
         model,
         M,
         dataset,
         sampler_max_num_nodes,
         train_test_split=True,
-        num_workers=2,
-        plot=True,
-        max_epochs=3000
+        num_workers=4,
+        plot=False,
+        max_epochs=3000,
+        mode="offline"
     )

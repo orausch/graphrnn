@@ -1,16 +1,16 @@
 from graphrnn_v2.data import RNNTransform
 from graphrnn_v2.experiments.train import train_experiment
 from graphrnn_v2.data import TreeDataset
-from graphrnn_v2.experiments.models import graphrnn, graphrnn_s
+from graphrnn_v2.experiments.models import graphrnn_small, graphrnn_s_small
 
 if __name__ == "__main__":
     # GraphRNN_s,
     M = 10
     dataset = TreeDataset(transform=RNNTransform(M=M))
     sampler_max_num_nodes = 20
-    model = graphrnn_s(M)
+    model = graphrnn_s_small(M)
     train_experiment(
-        f"trees_graphrnn_s",
+        f"trees_graphrnn_s_small",
         model,
         M,
         dataset,
@@ -24,9 +24,9 @@ if __name__ == "__main__":
     M = 10
     dataset = TreeDataset(transform=RNNTransform(M=M))
     sampler_max_num_nodes = 20
-    model = graphrnn(M)
+    model = graphrnn_small(M)
     train_experiment(
-        f"trees",
+        f"trees_small",
         model,
         M,
         dataset,

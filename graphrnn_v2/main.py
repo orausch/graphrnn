@@ -20,35 +20,51 @@ import torch_geometric
 from torch_geometric.loader import DataLoader
 
 from graphrnn_v2.models import GraphRNN_S
-from graphrnn_v2.data import GridDataset, RNNTransform, EncodeGraphRNNFeature
+from graphrnn_v2.data import GridDataset, RNNTransform, EncodeGraphRNNFeature, CommunityDataset
 from graphrnn_v2.stats.stats import GraphStats
 
 
 if __name__ == "__main__":
-    BASE_SAVE_PATH = os.path.join("/cluster/scratch/rauscho/", "grid_run_" + str(datetime.datetime.now()))
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", required=True)
+    args = parser.parse_args()
+
+    BASE_SAVE_PATH = os.path.join("/cluster/scratch/rauscho/final_v2_runs/", args.dataset + "_run_" + str(datetime.datetime.now()))
     os.makedirs(BASE_SAVE_PATH)
-    wandb.init(project="graphrnn-reproduction", entity="graphnn-reproduction", job_type="v2_community")
-    M = 80
+    wandb.init(project="graphrnn-reproduction", entity="graphnn-reproduction", job_type="final_" + args.dataset)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    grid_dataset = GridDataset(transform=RNNTransform(M=M))
+    if args.dataset == "grid":
+        M = 40
+        grid_dataset = GridDataset(transform=RNNTransform(M=M))
+    elif args.dataset == "community2":
+        M = 80
+        grid_dataset = CommunityDataset(transform=RNNTransform(M=M))
+    else:
+        assert False
+    wandb.config["M"] = M
+   
     train_dataset, test_dataset = torch.utils.data.random_split(
         grid_dataset, [int(0.8 * len(grid_dataset)), len(grid_dataset) - int(0.8 * len(grid_dataset))]
     )
     # use a random sampler to match the paper
-    sampler = torch.utils.data.RandomSampler(train_dataset, num_samples=32 * 32, replacement=True)
-    train_dataloader = DataLoader(train_dataset, batch_size=32, num_workers=4, sampler=sampler)
+    sampler_args = dict(num_samples=32*32)
+    sampler = torch.utils.data.RandomSampler(train_dataset, **sampler_args, replacement=True)
+    loader_args = dict(batch_size=32, num_workers=4)
+    train_dataloader = DataLoader(train_dataset, **loader_args, sampler=sampler)
     test_graphs = [torch_geometric.utils.to_networkx(graph, to_undirected=True) for graph in test_dataset]
     sampler_max_num_nodes = 1000
-
-    model = GraphRNN_S(
+    model_args = dict(
         adjacency_size=M,
         embed_first=True,
         adjacency_embedding_size=64,
         hidden_size=128,
         num_layers=4,
-        output_embedding_size=64,
-    )
+        output_embedding_size=64)
+
+    wandb.config.update(model_args)
+    model = GraphRNN_S(**model_args)
 
     # model = GraphRNN(
     #     adjacency_size=M,
@@ -62,7 +78,6 @@ if __name__ == "__main__":
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[400, 1000], gamma=0.3)
-
     model.train()
     model = model.to(device)
     for epoch in tqdm(range(3000)):
@@ -112,7 +127,9 @@ if __name__ == "__main__":
                     pickle.dump(graphs, f)
 
                 degree_mmd = GraphStats.degree(test_graphs, graphs)
+                clustering = GraphStats.clustering(test_graphs, graphs)
                 logging_stats["degree_mmd"] = degree_mmd
+                logging_stats["clustering"] = clustering
                 logging_stats["sample_time"] = time.time() - sample_start_time
 
             wandb.log(logging_stats)

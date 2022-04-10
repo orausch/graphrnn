@@ -26,9 +26,10 @@ if __name__ == "__main__":
         "--base_path",
         type=str,
         help="base path to model. Models will be loaded from model_{epoch}.pt",
+        required=True,
     )
-    parser.add_argument("--start_epoch", type=int, help="the epoch to start from")
-    parser.add_argument("--data", type=str, help="name of dataset")
+    parser.add_argument("--start_epoch", type=int, help="the epoch to start from", required=True)
+    parser.add_argument("--dataset", type=str, help="name of dataset", required=True)
 
     args = parser.parse_args()
 
@@ -65,10 +66,10 @@ if __name__ == "__main__":
         output_embedding_size=64,
     )
 
-    for i in tqdm(range(args.start_epoch % 100, 3001, 100)):
+    for i in tqdm(range(args.start_epoch, 3001, 100)):
         model.load_state_dict(
             torch.load(
-                os.path.join(args.base_path, "model_{}.pt".format(args.start_epoch))
+                os.path.join(args.base_path, "model_{}.pt".format(i))
             )
         )
 

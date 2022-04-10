@@ -32,3 +32,24 @@ class KRegularDataset(data.InMemoryDataset):
 
         graphs = [from_networkx(G) for G in graphs if nx.is_connected(G)]
         self.data, self.slices = self.collate(graphs)
+
+
+class SmallKRegularDataset(data.InMemoryDataset):
+    """
+    Create a dataset of k-regular graphs.
+    """
+    min_order = 4
+    max_order = 32
+
+    def __init__(self, transform):
+        super().__init__(".", transform)
+        k = 3
+
+        graphs = [
+            nx.random_regular_graph(k, n)
+            for n in range(self.min_order, self.max_order + 1)
+            if (n * k) % 2 == 0
+        ]
+
+        graphs = [from_networkx(G) for G in graphs if nx.is_connected(G)]
+        self.data, self.slices = self.collate(graphs)

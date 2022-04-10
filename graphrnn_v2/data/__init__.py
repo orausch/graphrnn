@@ -12,5 +12,6 @@ from .graph_datasets import (
     KRegularDataset,
     LadderDataset,
     TreeDataset,
+    SmallKRegularDataset,
 )
 from .transform import RNNTransform, EncodeGraphRNNFeature, BFS

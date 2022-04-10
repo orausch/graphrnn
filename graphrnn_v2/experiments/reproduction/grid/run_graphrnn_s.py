@@ -19,5 +19,6 @@ if __name__ == "__main__":
         num_workers=4,
         plot=False,
         max_epochs=3000,
-        mode="offline"
+        mode="offline",
+        save_path="/cluster/scratch/rauscho/v2_large_runs",
     )

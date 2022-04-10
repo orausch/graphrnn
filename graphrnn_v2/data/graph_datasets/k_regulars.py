@@ -8,7 +8,7 @@ class KRegularDataset(data.InMemoryDataset):
     Create a dataset of k-regular graphs.
     """
 
-    min_k = 2
+    min_k = 3
     max_k = 10
     min_order = 16
     max_order = 128
@@ -30,4 +30,5 @@ class KRegularDataset(data.InMemoryDataset):
             ]
         )
 
+        graphs = [G for G in graphs if nx.is_connected(G)]
         self.data, self.slices = self.collate(graphs)

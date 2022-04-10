@@ -54,3 +54,20 @@ if __name__ == "__main__":
         plot=True,
         max_epochs=1500
     )
+
+    # GraphRNN, no k
+    M = 50
+    dataset = KRegularDataset(transform=RNNTransform(M=M))
+    sampler_max_num_nodes = 150
+    model = graphrnn_s(M)
+    train_experiment(
+        f"k_regular_graphrnn_s",
+        model,
+        M,
+        dataset,
+        sampler_max_num_nodes,
+        train_test_split=True,
+        num_workers=2,
+        plot=True,
+        max_epochs=1500
+    )

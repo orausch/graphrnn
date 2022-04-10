@@ -17,18 +17,18 @@ class KRegularDataset(data.InMemoryDataset):
         super().__init__(".", transform)
         graphs = (
             [
-                from_networkx(nx.random_regular_graph(k, n))
+                nx.random_regular_graph(k, n)
                 for k in range(self.min_k, self.max_k + 1)
                 for n in range(self.min_order, self.max_order + 1)
                 if (n * k) % 2 == 0
             ]
             if k is None
             else [
-                from_networkx(nx.random_regular_graph(k, n))
+                nx.random_regular_graph(k, n)
                 for n in range(self.min_order, self.max_order + 1)
                 if (n * k) % 2 == 0
             ]
         )
 
-        graphs = [G for G in graphs if nx.is_connected(G)]
+        graphs = [from_networkx(G) for G in graphs if nx.is_connected(G)]
         self.data, self.slices = self.collate(graphs)

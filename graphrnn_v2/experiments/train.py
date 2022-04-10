@@ -54,6 +54,8 @@ def train_experiment(
     with run:
         if save_path is None:
             save_path = pathlib.Path.cwd()
+        else:
+            save_path = pathlib.Path(save_path)
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if train_test_split:
             train_dataset, test_dataset = torch.utils.data.random_split(

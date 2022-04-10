@@ -18,7 +18,7 @@ class MMD:
 
     @staticmethod
     def l2(x: float, y: float) -> float:
-        return x-y
+        return np.abs(x-y)
 
     @staticmethod
     def mmd_emd(x: list[np.array], y: list[np.array]) -> float:

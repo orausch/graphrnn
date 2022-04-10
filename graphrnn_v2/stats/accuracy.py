@@ -32,3 +32,21 @@ class KRegularAccuracy(Accuracy):
             )
 
         return sum(is_regular(G) for G in graphs) / len(graphs)
+
+
+class LadderAccuracy(Accuracy):
+    @staticmethod
+    def measure(graphs: list[nx.Graph]) -> float:
+        def is_ladder(G: nx.Graph) -> bool:
+            N = len(G)
+            if N % 2 != 0:
+                return False
+
+            L = nx.ladder_graph(N // 2)  # construct ladder graph of the same size
+            return nx.degree_histogram(G) == nx.degree_histogram(
+                L
+            ) and nx.weisfeiler_lehman_graph_hash(G) == nx.weisfeiler_lehman_graph_hash(
+                L
+            )
+
+        return sum(is_ladder(G) for G in graphs) / len(graphs)

@@ -1,4 +1,5 @@
 import pathlib
+import pickle
 import time
 
 import networkx as nx
@@ -11,37 +12,59 @@ from torch.nn.utils import rnn as rnnutils
 from torch_geometric.loader import DataLoader
 from tqdm import tqdm
 
-from graphrnn_v2.data import RNNTransform, EncodeGraphRNNFeature
+from graphrnn_v2.data import EncodeGraphRNNFeature
 from graphrnn_v2.models import GraphRNN
 from graphrnn_v2.stats.stats import GraphStats
-
-import pickle
 
 
 def plot_(graphs):
     plt.figure(figsize=(10, 10))
     for i, graph in enumerate(graphs):
-        plt.subplot(4, 2, 2*i + 1)
+        plt.subplot(4, 2, 2 * i + 1)
         nx.draw_spectral(graph, node_size=100)
-        plt.subplot(4, 2, 2*i + 2)
+        plt.subplot(4, 2, 2 * i + 2)
         nx.draw(graph, node_size=100)
     plt.show()
 
 
+def compute_test_nll(model, test_dataloader, device):
+    with torch.no_grad():
+        test_nll = 0
+        for batch_idx, batch in enumerate(test_dataloader):
+            batch = batch.to(device)
+
+            lengths = batch.length.cpu()  # torch.split needs a tuple of ints.
+            lengths_tuple = tuple(lengths.tolist())
+            x_padded = rnnutils.pad_sequence(torch.split(batch.x, lengths_tuple), batch_first=True)
+            y_padded = rnnutils.pad_sequence(torch.split(batch.y, lengths_tuple), batch_first=True)
+
+            if isinstance(model, GraphRNN):
+                grouped_edge_seqs = model.get_grouped_edge_sequences_from_y(y_padded, lengths)
+                output_sequences = model(x_padded, lengths, grouped_edge_seqs)
+            else:
+                output_sequences = model(x_padded, lengths)
+
+            test_nll += (
+                    F.binary_cross_entropy(output_sequences.tril(), y_padded, reduction="sum").item()
+                    / batch.num_graphs
+            )
+        return test_nll / len(test_dataloader)
+
+
 def train_experiment(
-    name,
-    model,
-    M,
-    dataset,
-    sampler_max_num_nodes,
-    train_test_split=True,
-    mode="online",
-    epoch_checkpoint=100,
-    max_epochs=3000,
-    num_workers=0,
-    save_path=None,
-    plot=False,
-    nb_samples=64,
+        name,
+        model,
+        M,
+        dataset,
+        sampler_max_num_nodes,
+        train_test_split=True,
+        mode="online",
+        epoch_checkpoint=100,
+        max_epochs=3000,
+        num_workers=0,
+        save_path=None,
+        plot=False,
+        nb_samples=64,
 ):
     run = wandb.init(
         project="graphrnn-reproduction",
@@ -68,9 +91,14 @@ def train_experiment(
         else:
             train_dataset, test_dataset = dataset, dataset
 
-        sampler = torch.utils.data.RandomSampler(train_dataset, num_samples=32 * 32, replacement=True)
-        train_dataloader = DataLoader(train_dataset, batch_size=32, num_workers=num_workers, sampler=sampler)
+        train_sampler = torch.utils.data.RandomSampler(train_dataset, num_samples=32 * 32, replacement=True)
+        train_dataloader = DataLoader(train_dataset, batch_size=32, num_workers=num_workers, sampler=train_sampler)
+
+        test_sampler = torch.utils.data.RandomSampler(test_dataset, num_samples=32 * 32, replacement=True)
+        test_dataloader = DataLoader(test_dataset, batch_size=32, num_workers=num_workers, sampler=test_sampler)
+
         test_graphs = [torch_geometric.utils.to_networkx(graph, to_undirected=True) for graph in test_dataset]
+
         if plot:
             plot_(test_graphs[:4])
 
@@ -121,9 +149,13 @@ def train_experiment(
                     with torch.no_grad():
                         # Only leave relevant bits. (In rows  i < M, remove bits before i).
                         epoch_nll += (
-                            F.binary_cross_entropy(output_sequences.tril(), y_padded, reduction="sum").item()
-                            / batch.num_graphs
+                                F.binary_cross_entropy(output_sequences.tril(), y_padded, reduction="sum").item()
+                                / batch.num_graphs
                         )
+
+                    if batch_idx == 0:
+                        test_nll = compute_test_nll(model, test_dataloader, device)
+                        logging_stats["test_nll"] = test_nll
 
                     if batch_idx == 0:
                         sample_start_time = time.time()
@@ -137,7 +169,9 @@ def train_experiment(
                         if plot:
                             plot_(graphs[:4])
                         degree_mmd = GraphStats.degree(test_graphs, graphs)
+                        clustering_mmd = GraphStats.clustering(test_graphs, graphs)
                         logging_stats["degree_mmd"] = degree_mmd
+                        logging_stats["clustering_mmd"] = clustering_mmd
                         logging_stats["sample_time"] = time.time() - sample_start_time
 
                     if batch_idx == 0:

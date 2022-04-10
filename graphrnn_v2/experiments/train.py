@@ -15,6 +15,8 @@ from graphrnn_v2.data import RNNTransform, EncodeGraphRNNFeature
 from graphrnn_v2.models import GraphRNN
 from graphrnn_v2.stats.stats import GraphStats
 
+import pickle
+
 
 def plot_(graphs):
     plt.figure(figsize=(10, 10))
@@ -56,6 +58,10 @@ def train_experiment(
             train_dataset, test_dataset = torch.utils.data.random_split(
                 dataset, [int(0.8 * len(dataset)), len(dataset) - int(0.8 * len(dataset))]
             )
+            path = save_path / name
+            path.mkdir(parents=True, exist_ok=True)
+            pickle.dump(train_dataset, open(path / f"train_dataset.pkl", "wb"))
+            pickle.dump(test_dataset, open(path / f"test_dataset.pkl", "wb"))
         else:
             train_dataset, test_dataset = dataset, dataset
 

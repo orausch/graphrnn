@@ -34,21 +34,21 @@ def stat(heuristic: Callable[[np.ndarray, np.ndarray], float]):
 
 class GraphStats:
     @staticmethod
-    @stat(MMD.mmd)
+    @stat(MMD.mmd_emd)
     def degree(G: nx.Graph) -> np.ndarray:
         return np.array(nx.degree_histogram(G))
 
     @staticmethod
-    @stat(MMD.mmd)
+    @stat(MMD.mmd_emd)
     def clustering(G: nx.Graph) -> np.ndarray:
         clustering_coeffs_list = list(nx.clustering(G).values())
         hist, _ = np.histogram(clustering_coeffs_list, bins=100, range=(0.0, 1.0), density=False)
         return hist
 
     @staticmethod
-    @stat(MMD.mmd)
+    @stat(MMD.mmd_emd)
     def laplacian(G: nx.Graph) -> np.ndarray:
-        eigenvals = nx.laplacian_spectrum(G)
+        eigenvals = nx.normalized_laplacian_spectrum(G)
         hist, _ = np.histogram(eigenvals, bins=100, range=(0.0, 2.0), density=False)
         return hist
 
@@ -57,15 +57,35 @@ class GraphStats:
         pass
 
     @staticmethod
-    @stat(MMD.mmd)
+    @stat(MMD.mmd_emd)
     def betweenness_centrality(G: nx.Graph) -> np.ndarray:
         betweenness_centrality_list = list(nx.betweenness_centrality(G).values())
         hist, _ = np.histogram(betweenness_centrality_list, bins=100, range=(0.0, 1.0), density=False)
         return hist
 
     @staticmethod
-    @stat(MMD.mmd)
+    @stat(MMD.mmd_emd)
     def eigenvector_centrality(G: nx.Graph) -> np.ndarray:
         eigenvector_centrality_list = list(nx.eigenvector_centrality(G).values())
         hist, _ = np.histogram(eigenvector_centrality_list, bins=100, range=(0.0, 1.0), density=False)
         return hist
+
+    @staticmethod
+    @stat(MMD.mmd_l2)
+    def density(G: nx.Graph) -> np.ndarray:
+        return nx.density(G)
+
+    @staticmethod
+    @stat(MMD.mmd_l2)
+    def diameter(G: nx.Graph) -> np.ndarray:
+        return nx.diameter(G)
+
+    @staticmethod
+    @stat(MMD.mmd_l2)
+    def nb_of_nodes(G: nx.Graph) -> np.ndarray:
+        return nx.number_of_nodes(G)
+
+    @staticmethod
+    @stat(MMD.mmd_l2)
+    def nb_of_edges(G: nx.Graph) -> np.ndarray:
+        return nx.number_of_edges(G)

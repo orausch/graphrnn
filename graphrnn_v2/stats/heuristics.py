@@ -17,7 +17,11 @@ class MMD:
         return np.sum(np.abs(emd))
 
     @staticmethod
-    def mmd(x: list[np.array], y: list[np.array]) -> float:
+    def l2(x: float, y: float) -> float:
+        return x-y
+
+    @staticmethod
+    def mmd_emd(x: list[np.array], y: list[np.array]) -> float:
         """
         Compute MMD between two lists of lists of values.
 
@@ -44,5 +48,24 @@ class MMD:
         d_xx = sum([pairwise_gaussian_emd(x_i, x_j) for x_i in x for x_j in x]) / len(x) ** 2
         d_yy = sum([pairwise_gaussian_emd(y_i, y_j) for y_i in y for y_j in y]) / len(y) ** 2
         d_xy = sum([pairwise_gaussian_emd(x_i, y_i) for x_i in x for y_i in y]) / (len(x) * len(y))
+
+        return d_xx + d_yy - 2.0 * d_xy
+
+    @staticmethod
+    def mmd_l2(x: list[np.array], y: list[np.array]) -> float:
+        """
+        Compute MMD between two lists of values.
+
+        @param x: list of values
+        @param y: list of values
+        """
+
+        def pairwise_gaussian_dist(x: float, y: float) -> float:
+            dist = MMD.l2(x, y)
+            return np.exp(-dist * dist / 2.0)
+
+        d_xx = sum([pairwise_gaussian_dist(x_i, x_j) for x_i in x for x_j in x]) / len(x) ** 2
+        d_yy = sum([pairwise_gaussian_dist(y_i, y_j) for y_i in y for y_j in y]) / len(y) ** 2
+        d_xy = sum([pairwise_gaussian_dist(x_i, y_i) for x_i in x for y_i in y]) / (len(x) * len(y))
 
         return d_xx + d_yy - 2.0 * d_xy
